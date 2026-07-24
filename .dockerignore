@@ -1,0 +1,12 @@
+data/
+.atl/
+.dist/
+node_modules/
+test/
+
+.dockerignore
+.gitignore
+.prettierrc
+dockerfile
+eslint.config.mjs
+README.md

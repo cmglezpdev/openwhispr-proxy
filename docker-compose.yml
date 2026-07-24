@@ -1,0 +1,8 @@
+services:
+  openwhispr-proxy:
+    build: .
+    ports:
+      - '${PORT:-8080}:80'
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
