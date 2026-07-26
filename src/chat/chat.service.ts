@@ -38,6 +38,7 @@ export class ChatService {
       gatewayOptions.chat_template_kwargs = chatTemplateKwargs;
     }
 
+    const startedAt = performance.now();
     const result = await generateText({
       model,
       messages,
@@ -46,6 +47,7 @@ export class ChatService {
         providerOptions: { gateway: gatewayOptions },
       }),
     });
+    const latencyMs = Math.round(performance.now() - startedAt);
 
     const { text, steps } = result;
     const finalStep = steps.at(-1);
@@ -57,6 +59,7 @@ export class ChatService {
     this.usageRepo.saveEnhancedTranscription({
       model,
       text,
+      latencyMs,
       costUsd,
       generationId,
     });

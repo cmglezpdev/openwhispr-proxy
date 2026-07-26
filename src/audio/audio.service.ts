@@ -16,11 +16,13 @@ export class AudioService {
   ): Promise<any> {
 
     process.env.AI_GATEWAY_API_KEY = apiKey;
+    const startedAt = performance.now();
     const result = await transcribe({
         model,
         audio: file.buffer,
     })
-    
+    const latencyMs = Math.round(performance.now() - startedAt);
+
     const { text, durationInSeconds, providerMetadata } = result;
     const costUsd = providerMetadata.gateway.cost as string;
     const generationId = providerMetadata.gateway.generationId as string;
@@ -30,6 +32,7 @@ export class AudioService {
 			model,
 			text,
 			durationSeconds,
+			latencyMs,
 			costUsd,
 			generationId,
 		})
