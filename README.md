@@ -81,7 +81,58 @@ sqlite3 data/usage.db "SELECT model, COUNT(*), SUM(cost_usd) FROM enhanced_trans
 
 ## Configuring OpenWhispr
 
-Point OpenWhispr's custom API base URL at wherever this proxy is running (e.g. `http://localhost:8080`) and use your normal AI Gateway API key — the proxy forwards it through unchanged.
+Once the container is up, the only thing left is pointing OpenWhispr at it. There is nothing to configure on the proxy side — no `.env`, no server-side API key. The Vercel AI Gateway key travels in each request and is forwarded unchanged.
+
+You need two things at hand:
+
+- **Endpoint** — the base URL where the proxy is reachable, e.g. `http://localhost:8080` (use the host port you mapped; `8080` is the compose default).
+- **API key** — your [Vercel AI Gateway](https://vercel.com/docs/ai-gateway) API key.
+
+OpenWhispr calls two separate services, and **both** must be pointed at the proxy.
+
+### 1. Speech to Text (transcription)
+
+In OpenWhispr, open **Settings → Speech to Text**, choose the **Custom** provider and fill in:
+
+| Field    | Value                                                  |
+| -------- | ------------------------------------------------------ |
+| Endpoint | `http://localhost:8080`                                |
+| API Key  | your Vercel AI Gateway API key                         |
+| Model    | a transcription model, e.g. `openai/whisper-1`         |
+
+This is the audio-to-text step. OpenWhispr will hit `POST /audio/transcriptions` on the proxy, which forwards it to the AI Gateway.
+
+> The model id is passed to the AI Gateway verbatim, so it **must** include the provider prefix (`openai/whisper-1`, not `whisper-1`).
+
+### 2. Language Model (transcript cleanup)
+
+This second model polishes what the transcription returned — punctuation, question marks, capitalization — so the final text reads clean.
+
+In **Settings → Language Model**, again choose **Custom**:
+
+| Field    | Value                                                        |
+| -------- | ------------------------------------------------------------ |
+| Endpoint | `http://localhost:8080`                                      |
+| API Key  | your Vercel AI Gateway API key (the same one)                |
+| Model    | any chat model in the Gateway catalog, e.g. `openai/gpt-4o-mini` |
+
+This step hits `POST /v1/chat/completions` on the proxy.
+
+Both steps use the **same endpoint and the same API key** — only the model differs.
+
+### Checking available models
+
+To see exactly which model ids the Gateway exposes for your key:
+
+```bash
+curl -H "Authorization: Bearer <AI_GATEWAY_API_KEY>" http://localhost:8080/models
+```
+
+### Notes
+
+- If OpenWhispr runs on a different machine than the proxy, replace `localhost` with the host's IP or domain.
+- If the proxy runs in Docker and OpenWhispr on the host, `http://localhost:<PORT>` works as long as you mapped the port (`-p 8080:80`).
+- Every request through both steps is logged to `./data/usage.db` with its cost, so you can track spend per model.
 
 ## Run tests
 
