@@ -1,7 +1,7 @@
 import { Injectable, Logger, OnModuleDestroy } from '@nestjs/common';
 import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 
 export interface TranscriptionRecord {
   model: string;
@@ -58,10 +58,14 @@ export class UsageRepository implements OnModuleDestroy {
   private readonly db: DatabaseSync;
 
   constructor() {
-    const dataDir = join(process.cwd(), 'data');
-    mkdirSync(dataDir, { recursive: true });
+    const dbPath =
+      process.env.USAGE_DB_PATH ?? join(process.cwd(), 'data', 'usage.db');
 
-    this.db = new DatabaseSync(join(dataDir, 'usage.db'));
+    if (dbPath !== ':memory:') {
+      mkdirSync(dirname(dbPath), { recursive: true });
+    }
+
+    this.db = new DatabaseSync(dbPath);
     this.runMigrations();
   }
 
