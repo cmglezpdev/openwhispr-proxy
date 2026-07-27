@@ -12,7 +12,22 @@ OpenAI-compatible proxy that sits between [OpenWhispr](https://github.com/openwh
 
 All routes expect a standard `Authorization: Bearer <AI_GATEWAY_API_KEY>` header — the proxy has no server-side API key configuration; each request carries its own.
 
-> **Concurrency note:** the API key from the incoming request is currently applied via a shared `process.env.AI_GATEWAY_API_KEY` assignment before each Gateway call. Under concurrent requests using *different* keys, this can race. Fine for single-user/local use; worth knowing if you expose this to multiple simultaneous clients.
+> **Concurrency note:** the API key from the incoming request is currently applied via a shared `process.env.AI_GATEWAY_API_KEY` assignment before each Gateway call. Under concurrent requests using *different* keys, this can race. Fine for single-user/local use; worth knowing if you expose this to multiple simultaneous clients. This is unrelated to app configuration below — it's a per-request value, not a static setting, so it's not something you set in `.env`.
+
+## Configuration
+
+The app reads its configuration from environment variables via a typed `EnvService` (`src/config/env.service.ts`) — nothing reads `process.env` directly outside of it. Copy the template and adjust as needed:
+
+```bash
+cp .env.example .env
+```
+
+| Variable         | Required | Default                       | Purpose                                  |
+| ---------------- | -------- | ------------------------------ | ----------------------------------------- |
+| `PORT`           | No       | `8080`                        | Port the HTTP server listens on           |
+| `USAGE_DB_PATH`  | No       | `<project-root>/data/usage.db` | Absolute path to the SQLite usage database |
+
+`.env` is loaded automatically on startup (via `dotenv`) — Node does not do this on its own.
 
 ## Running locally (no Docker)
 
@@ -24,7 +39,7 @@ pnpm build
 pnpm start:prod
 ```
 
-The server listens on port `80` (hardcoded in `src/main.ts`), so on macOS/Linux you'll need elevated privileges to bind it directly, or change that constant. For local development:
+The server listens on the port from `PORT` (`8080` by default — no elevated privileges required). For local development:
 
 ```bash
 pnpm start:dev
@@ -38,23 +53,26 @@ pnpm start:dev
 docker build -t openwhispr-proxy .
 docker run -d \
   --name openwhispr-proxy \
-  -p 8080:80 \
+  -e PORT=8080 \
+  -p 8080:8080 \
   -v "$(pwd)/data:/app/data" \
   openwhispr-proxy
 ```
 
-- `-p 8080:80` maps your host port `8080` to the container's port `80` — change `8080` to whatever port you want on your machine; the container-side port always stays `80`.
+- `-e PORT=8080` sets the port the app listens on **inside** the container.
+- `-p 8080:8080` maps that same port to your host — change the host-side number (left of the colon) to use a different port on your machine; keep the container-side number (right of the colon) matching `PORT`.
 - `-v "$(pwd)/data:/app/data"` mounts a local `./data` folder into the container so the SQLite usage database survives container restarts/rebuilds. **Without this volume, all usage history is lost every time the container is recreated.**
 
 ### With docker-compose (recommended)
 
-A `docker-compose.yml` is included with the port and volume already wired up:
+A `docker-compose.yml` is included with `PORT` and the volume already wired up. It reads `PORT` (and `USAGE_DB_PATH`, if set) from your `.env`:
 
 ```bash
-PORT=8080 docker compose up -d --build
+cp .env.example .env   # if you haven't already
+docker compose up -d --build
 ```
 
-- `PORT` (optional, defaults to `8080`) controls the host-side port.
+- `PORT` (optional, defaults to `8080`) controls both the host-side port and the port the app listens on inside the container — one variable, both sides stay in sync.
 - Data persists in `./data/usage.db` on the host, bind-mounted into the container.
 
 To stop it:
@@ -81,7 +99,7 @@ sqlite3 data/usage.db "SELECT model, COUNT(*), SUM(cost_usd) FROM enhanced_trans
 
 ## Configuring OpenWhispr
 
-Once the container is up, the only thing left is pointing OpenWhispr at it. There is nothing to configure on the proxy side — no `.env`, no server-side API key. The Vercel AI Gateway key travels in each request and is forwarded unchanged.
+Once the container is up, the only thing left is pointing OpenWhispr at it. The proxy's own `.env` only controls `PORT` and `USAGE_DB_PATH` (see [Configuration](#configuration)) — there is no server-side API key to set up. The Vercel AI Gateway key travels in each request and is forwarded unchanged.
 
 You need two things at hand:
 
@@ -145,7 +163,7 @@ Gemini 2.5 Flash lite is a ultra fasy model, with low latency and it's enough to
 ### Notes
 
 - If OpenWhispr runs on a different machine than the proxy, replace `localhost` with the host's IP or domain.
-- If the proxy runs in Docker and OpenWhispr on the host, `http://localhost:<PORT>` works as long as you mapped the port (`-p 8080:80`).
+- If the proxy runs in Docker and OpenWhispr on the host, `http://localhost:<PORT>` works as long as you mapped the port (`-p 8080:8080` or via `docker-compose.yml`'s `PORT` variable).
 - Every request through both steps is logged to `./data/usage.db` with its cost, so you can track spend per model.
 
 ## Run tests

@@ -1,8 +1,11 @@
 services:
   openwhispr-proxy:
     build: .
+    environment:
+      PORT: ${PORT:-8080}
+      USAGE_DB_PATH: ${USAGE_DB_PATH:-}
     ports:
-      - '${PORT:-8080}:80'
+      - '${PORT:-8080}:${PORT:-8080}'
     volumes:
       - ./data:/app/data
     restart: unless-stopped

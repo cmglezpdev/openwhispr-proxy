@@ -2,7 +2,12 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
+import { EnvService } from 'src/config/env.service';
 import { UsageRepository } from './usage.repository';
+
+/** Stubs only the field UsageRepository actually reads from EnvService. */
+const stubEnv = (usageDbPath: string): EnvService =>
+  ({ usageDbPath }) as EnvService;
 
 /**
  * Integration test: runs against a real SQLite file, no mocks.
@@ -21,7 +26,7 @@ describe('UsageRepository', () => {
 
   const openRepository = (): UsageRepository => {
     closeRepository();
-    repository = new UsageRepository();
+    repository = new UsageRepository(stubEnv(dbPath));
     return repository;
   };
 
@@ -50,14 +55,12 @@ describe('UsageRepository', () => {
     tempDir = mkdtempSync(join(tmpdir(), 'openwhispr-usage-'));
     // Nested on purpose: the repository must create missing directories.
     dbPath = join(tempDir, 'nested', 'usage.db');
-    process.env.USAGE_DB_PATH = dbPath;
     repository = null;
     openRepository();
   });
 
   afterEach(() => {
     closeRepository();
-    delete process.env.USAGE_DB_PATH;
     rmSync(tempDir, { recursive: true, force: true });
   });
 
