@@ -69,8 +69,8 @@ The volume is a bind mount to `./data`, so `docker compose down` does **not** de
 
 Every request to `/audio/transcriptions` and `/v1/chat/completions` is logged to a SQLite database at `./data/usage.db` (created automatically on first run), with two tables:
 
-- `transcriptions` — `model`, `duration_seconds`, `text`, `cost_usd`, `generation_id`, `created_at`
-- `enhanced_transcriptions` — `model`, `text`, `cost_usd`, `generation_id`, `created_at`
+- `transcriptions` — `model`, `duration_seconds`, `text`, `latency_ms`, `cost_usd`, `generation_id`, `created_at`
+- `enhanced_transcriptions` — `model`, `text`, `latency_ms`, `cost_usd`, `generation_id`, `created_at`
 
 There is currently no HTTP endpoint to query this — check it directly with the `sqlite3` CLI:
 
@@ -94,15 +94,15 @@ OpenWhispr calls two separate services, and **both** must be pointed at the prox
 
 In OpenWhispr, open **Settings → Speech to Text**, choose the **Custom** provider and fill in:
 
-| Field    | Value                                                  |
-| -------- | ------------------------------------------------------ |
-| Endpoint | `http://localhost:8080`                                |
-| API Key  | your Vercel AI Gateway API key                         |
-| Model    | a transcription model, e.g. `openai/whisper-1`         |
+| Field    | Value                                                     |
+| -------- | --------------------------------------------------------- |
+| Endpoint | `http://localhost:8080`                                   |
+| API Key  | your Vercel AI Gateway API key                            |
+| Model    | a transcription model, e.g. `openai/gpt-4o-mini-transcribe` |
 
 This is the audio-to-text step. OpenWhispr will hit `POST /audio/transcriptions` on the proxy, which forwards it to the AI Gateway.
 
-> The model id is passed to the AI Gateway verbatim, so it **must** include the provider prefix (`openai/whisper-1`, not `whisper-1`).
+> The model id is passed to the AI Gateway verbatim, so it **must** include the provider prefix (`openai/gpt-4o-mini-transcribe`, not `gpt-4o-mini-transcribe`).
 
 ### 2. Language Model (transcript cleanup)
 
@@ -110,23 +110,37 @@ This second model polishes what the transcription returned — punctuation, ques
 
 In **Settings → Language Model**, again choose **Custom**:
 
-| Field    | Value                                                        |
-| -------- | ------------------------------------------------------------ |
-| Endpoint | `http://localhost:8080`                                      |
-| API Key  | your Vercel AI Gateway API key (the same one)                |
-| Model    | any chat model in the Gateway catalog, e.g. `openai/gpt-4o-mini` |
+| Field    | Value                                                                |
+| -------- | -------------------------------------------------------------------- |
+| Endpoint | `http://localhost:8080`                                              |
+| API Key  | your Vercel AI Gateway API key (the same one)                        |
+| Model    | a fast, non-reasoning chat model, e.g. `google/gemini-2.5-flash-lite` |
 
 This step hits `POST /v1/chat/completions` on the proxy.
 
 Both steps use the **same endpoint and the same API key** — only the model differs.
 
-### Checking available models
+## Recommended models
 
-To see exactly which model ids the Gateway exposes for your key:
+### Transcription
 
-```bash
-curl -H "Authorization: Bearer <AI_GATEWAY_API_KEY>" http://localhost:8080/models
-```
+`openai/whisper-1` is the legacy model and the usual suspect when transcripts contain words that were never spoken. Whisper was trained on subtitled video, so on silence or low-energy audio it fills the gap with phrases from its training data instead of returning nothing ([OpenWhispr #462](https://github.com/OpenWhispr/openwhispr/issues/462), [openai/whisper #679](https://github.com/openai/whisper/discussions/679)).
+
+| Model                            | Price (OpenAI list)     | Notes                                             |
+| -------------------------------- | ----------------------- | ------------------------------------------------- |
+| `openai/gpt-4o-mini-transcribe`  | $0.003/min              | Good default — lower WER than Whisper, few hallucinations |
+| `openai/gpt-4o-transcribe`       | $0.006/min              | Heavy accents or noisy audio; best accuracy       |
+
+
+### Transcript cleanup
+
+Cleanup is a trivial task: add punctuation, fix casing. It does not benefit from a reasoning model — it only pays for one.
+
+| Model                            | Price (in/out per 1M)   | Notes                                            |
+| -------------------------------- | ----------------------- | ------------------------------------------------ |
+| `google/gemini-2.5-flash-lite`   | $0.10 / $0.40           | Good default — cheap, fast, no reasoning tokens  |
+
+Gemini 2.5 Flash lite is a ultra fasy model, with low latency and it's enough to adding punctuation, fix casting, etc.
 
 ### Notes
 
