@@ -7,6 +7,7 @@ import {
   Post,
 } from '@nestjs/common';
 import { JSONValue } from 'ai';
+import { assertProviderModelFormat } from 'src/common/provider-model.validator';
 import { ChatMessage, ChatService } from './chat.service';
 
 interface ChatCompletionsBody {
@@ -35,6 +36,8 @@ export class ChatController {
     if (!model) {
       throw new BadRequestException('Model is required');
     }
+
+    assertProviderModelFormat(model, 'openai/gpt-4o-mini');
 
     if (!apiKey) {
       throw new BadRequestException('API key is required');

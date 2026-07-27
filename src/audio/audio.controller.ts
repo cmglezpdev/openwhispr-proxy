@@ -9,6 +9,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
+import { assertProviderModelFormat } from 'src/common/provider-model.validator';
 import { AudioService } from './audio.service';
 
 @Controller('audio')
@@ -32,14 +33,16 @@ export class AudioController {
     const model = body.model;
     const apiKey = authorization?.replace(/^Bearer\s+/i, '');
 
-    if(!model) { 
+    if (!model) {
       throw new BadRequestException('Model is required');
     }
 
-    if(!apiKey) {
+    assertProviderModelFormat(model, 'openai/whisper-1');
+
+    if (!apiKey) {
       throw new BadRequestException('API key is required');
     }
-    
+
     this.logger.log(
       `Incoming transcription request: model=${model}, file=${file.originalname}`,
     );
