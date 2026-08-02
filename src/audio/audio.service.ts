@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { transcribe } from 'ai';
 import { UsageRepository } from 'src/usage/usage.repository';
+import { getAudioDurationSeconds } from './audio-duration';
 
 @Injectable()
 export class AudioService {
@@ -19,7 +20,10 @@ export class AudioService {
     const { text, durationInSeconds, providerMetadata } = result;
     const costUsd = providerMetadata.gateway.cost as string;
     const generationId = providerMetadata.gateway.generationId as string;
-    const durationSeconds = Number(durationInSeconds);
+    const durationSeconds =
+      Number(durationInSeconds) > 0
+        ? Number(durationInSeconds)
+        : getAudioDurationSeconds(file.buffer);
 
     this.transcriptionsRepo.saveTranscription({
       model,
