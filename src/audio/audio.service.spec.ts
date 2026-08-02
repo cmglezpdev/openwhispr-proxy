@@ -15,6 +15,36 @@ const buildFile = (): Express.Multer.File =>
     buffer: Buffer.from('fake'),
   }) as Express.Multer.File;
 
+/** Builds a minimal valid WAV with a known duration (seconds). */
+const buildWav = (seconds: number): Express.Multer.File => {
+  const sampleRate = 8000;
+  const channels = 1;
+  const bitsPerSample = 16;
+  const dataSize =
+    Math.floor(seconds * sampleRate) * channels * (bitsPerSample / 8);
+  const buffer = Buffer.alloc(44 + dataSize);
+  buffer.write('RIFF', 0);
+  buffer.writeUInt32LE(36 + dataSize, 4);
+  buffer.write('WAVE', 8);
+  buffer.write('fmt ', 12);
+  buffer.writeUInt32LE(16, 16);
+  buffer.writeUInt16LE(1, 20);
+  buffer.writeUInt16LE(channels, 22);
+  buffer.writeUInt32LE(sampleRate, 24);
+  buffer.writeUInt32LE(sampleRate * channels * (bitsPerSample / 8), 28);
+  buffer.writeUInt16LE(channels * (bitsPerSample / 8), 32);
+  buffer.writeUInt16LE(bitsPerSample, 34);
+  buffer.write('data', 36);
+  buffer.writeUInt32LE(dataSize, 40);
+  return {
+    fieldname: 'file',
+    originalname: 'sample.wav',
+    mimetype: 'audio/wav',
+    size: buffer.length,
+    buffer,
+  } as Express.Multer.File;
+};
+
 const gatewayResult = (overrides: Record<string, unknown> = {}) => ({
   text: 'hello world',
   durationInSeconds: 12.5,
@@ -93,6 +123,30 @@ describe('AudioService', () => {
 
     const [record] = saveTranscription.mock.calls[0] as [{ latencyMs: number }];
     expect(record.latencyMs).toBeGreaterThanOrEqual(0);
+  });
+
+  it('uses the file duration when the gateway omits it', async () => {
+    transcribe.mockResolvedValue(
+      gatewayResult({ durationInSeconds: undefined }),
+    );
+
+    await service.transcribe(buildWav(2), 'openai/gpt-4o-mini-transcribe', 'k');
+
+    expect(saveTranscription).toHaveBeenCalledWith(
+      expect.objectContaining({ durationSeconds: 2 }),
+    );
+  });
+
+  it('persists null duration when the file cannot be parsed', async () => {
+    transcribe.mockResolvedValue(
+      gatewayResult({ durationInSeconds: undefined }),
+    );
+
+    await service.transcribe(buildFile(), 'openai/gpt-4o-mini-transcribe', 'k');
+
+    expect(saveTranscription).toHaveBeenCalledWith(
+      expect.objectContaining({ durationSeconds: null }),
+    );
   });
 
   it('does not persist anything when the gateway call fails', async () => {
