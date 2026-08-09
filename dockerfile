@@ -22,6 +22,8 @@ RUN pnpm install --frozen-lockfile --prod
 FROM node:26-alpine AS runner
 WORKDIR /app
 
+LABEL dev.orbstack.icon="https://raw.githubusercontent.com/cmglezpdev/openwhispr-proxy/main/assets/orbstack-icon.png"
+
 COPY --from=builder /app/package.json ./package.json
 COPY --from=builder /app/dist/ ./dist
 COPY --from=prod-deps /app/node_modules/ ./node_modules

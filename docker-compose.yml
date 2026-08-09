@@ -1,6 +1,8 @@
 services:
   openwhispr-proxy:
     build: .
+    labels:
+      dev.orbstack.compose-icon: 'https://raw.githubusercontent.com/cmglezpdev/openwhispr-proxy/main/assets/orbstack-icon.png'
     environment:
       PORT: ${PORT:-8080}
       USAGE_DB_PATH: ${USAGE_DB_PATH:-}
