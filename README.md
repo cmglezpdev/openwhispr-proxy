@@ -1,4 +1,6 @@
-# openwhispr-proxy
+<p align="center">
+  <img src="assets/banner.png" alt="OpenWhispr Proxy — Voice to AI Gateway proxy with usage tracking" />
+</p>
 
 OpenAI-compatible proxy that sits between [OpenWhispr](https://github.com/openwhispr) and [Vercel AI Gateway](https://vercel.com/docs/ai-gateway). It exposes the routes OpenWhispr already expects (`/audio/transcriptions`, `/v1/chat/completions`, `/models`), forwards each request to the AI Gateway using the API key sent in the `Authorization` header, and logs usage (model, cost, generation id) to a local SQLite database so you can track spend.
 
