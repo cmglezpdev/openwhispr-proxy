@@ -42,3 +42,19 @@ Unknown costs and durations remain null. Genuine zero values remain zero. Empty 
 SQLite timestamps arrive as explicit UTC ISO strings. Date inputs, chart buckets and labels use local calendar time, including Monday-based weeks. The history reloads only when the page reloads. Tokens are outside the current persisted schema and are not displayed.
 
 Domain tests cover combined filters, unknown values, time boundaries and shared selection behavior. HTTP integration checks live in the repository's `test/` directory and include static frontend delivery.
+
+## Activity metrics
+
+The three summary cards show requests, spend rounded to cents and audio duration with automatic, minute or hour units. Background sparklines use the same selection as Trend and sum at most 30 time intervals, using hourly buckets for a single day. Stored durations remain seconds; changing display units does not change the data.
+
+The daily heatmap follows dashboard filters and switches between requests, audio and spend. Unknown-only values remain distinct from zero activity. Hover, keyboard focus or tap reveals each day's value and missing-data counts.
+
+The four speaking cards sit immediately below the primary summary, before Trend, model distribution and the daily heatmap. Each has a background sparkline. Words spoken abbreviates thousands as whole K values, with the exact count in its title and accessible label. Word and rate sparklines follow dashboard filters, sum words and recompute weighted rates per interval, leaving unavailable rates as gaps.
+
+Words and words per minute use transcription text only. Speaking rate divides eligible words by eligible audio minutes, including silence, rather than averaging individual recording rates. Both show coverage and follow dashboard filters. Current and longest streaks use all transcription history, independently of filters. The current streak must end today; a day without transcriptions breaks it. Calendar boundaries use the browser's time zone. Streak sparklines show actual end-of-period streak states and the historical record as it grew; they do not sum streak lengths.
+
+The agreed scope and acceptance criteria are recorded in [DASHBOARD-METRICS-PLAN.md](../DASHBOARD-METRICS-PLAN.md).
+
+The daily calendar fills available width with earlier out-of-selection cells and keeps the latest selected day in the rightmost week. All seven weekday labels remain visible. When the range needs horizontal scrolling, it opens at the latest dates.
+
+All dropdowns use `src/shared/ui/Select.tsx`. Pass typed `value`, `options` and `onValueChange`; the component handles native selection events, option rendering, three sizes and the shared arrow inset. Keep filter and chart state in the owning feature.

@@ -10,6 +10,8 @@ import { loadUsage } from './features/usage/infrastructure/usage-api';
 import { filterRequests } from './features/usage/domain/filters';
 import { FiltersPanel } from './features/usage/components/filters/FiltersPanel';
 import { SummaryCards } from './features/usage/components/summary/SummaryCards';
+import { SpeakingStats } from './features/usage/components/summary/SpeakingStats';
+import { ActivityHeatmap } from './features/usage/components/charts/ActivityHeatmap';
 import { TimelineChart } from './features/usage/components/charts/TimelineChart';
 import { ComparisonChart } from './features/usage/components/charts/ComparisonChart';
 import { RequestsTable } from './features/usage/components/table/RequestsTable';
@@ -146,7 +148,15 @@ export default function App() {
                   the table filters.
                 </p>
               )}
-              <SummaryCards requests={dashboardRequests} />
+              <SummaryCards
+                requests={dashboardRequests}
+                filters={state.dashboardFilters}
+              />
+              <SpeakingStats
+                requests={dashboardRequests}
+                history={snapshot.requests}
+                filters={state.dashboardFilters}
+              />
               <div className="grid grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)] gap-4.25 max-[1150px]:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] max-[800px]:grid-cols-1">
                 <TimelineChart
                   requests={dashboardRequests}
@@ -154,6 +164,10 @@ export default function App() {
                 />
                 <ComparisonChart requests={dashboardRequests} />
               </div>
+              <ActivityHeatmap
+                requests={dashboardRequests}
+                filters={state.dashboardFilters}
+              />
             </section>
             <section id="requests" className="mt-8 [&>section]:mb-3.75">
               <div className="mb-3.75 flex items-center justify-between gap-3.75 max-[540px]:flex-col max-[540px]:items-start max-[540px]:gap-2.5 [&_p]:mt-0.75 [&_p]:text-[12px] [&_p]:text-muted">

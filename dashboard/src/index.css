@@ -43,8 +43,7 @@
     @apply outline-2 outline-offset-[3px] outline-teal;
   }
 
-  input,
-  select {
+  input {
     @apply min-h-8.75 max-w-full rounded-[7px] border border-border bg-white px-2.25 py-1.5 text-text;
   }
 

@@ -1,3 +1,4 @@
+import { Select } from '../../../../shared/ui/Select';
 import { useMemo, useState } from 'react';
 import { BarChart3 } from 'lucide-react';
 import { barY, defineChart, lineY } from '@tanstack/charts';
@@ -159,37 +160,34 @@ export function TimelineChart({
           </span>
           <h3>Activity over time</h3>
         </div>
-        <div className="flex gap-1.75 max-[1150px]:flex-wrap [&_select]:min-h-7.5 [&_select]:px-1.5 [&_select]:py-1 [&_select]:text-[11px] max-[540px]:[&_select]:text-[10px]">
+        <div className="flex gap-1.75 max-[1150px]:flex-wrap">
           <label className="sr-only" htmlFor="timeline-metric">
             Timeline metric
           </label>
-          <select
+          <Select
             id="timeline-metric"
             value={metric}
-            onChange={(event) => setMetric(event.target.value as Metric)}
-          >
-            {Object.entries(metricNames).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
+            onValueChange={setMetric}
+            size="compact"
+            options={(['requests', 'cost', 'minutes'] as const).map(
+              (value) => ({ value, label: metricNames[value] }),
+            )}
+          />
           <label className="sr-only" htmlFor="timeline-period">
             Group by
           </label>
-          <select
+          <Select
             id="timeline-period"
             value={granularity}
-            onChange={(event) =>
-              setGranularity(event.target.value as Granularity)
-            }
-          >
-            {Object.entries(periodNames).map(([value, label]) => (
-              <option key={value} value={value}>
-                By {label.toLocaleLowerCase()}
-              </option>
-            ))}
-          </select>
+            onValueChange={setGranularity}
+            size="compact"
+            options={(['day', 'week', 'month', 'year'] as const).map(
+              (value) => ({
+                value,
+                label: `By ${periodNames[value].toLocaleLowerCase()}`,
+              }),
+            )}
+          />
         </div>
       </div>
       <div className="mt-1.25 flex min-h-8.5 items-center justify-between text-[10px] max-[540px]:gap-2">

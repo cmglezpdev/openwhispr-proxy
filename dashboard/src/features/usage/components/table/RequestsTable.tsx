@@ -1,3 +1,4 @@
+import { Select } from '../../../../shared/ui/Select';
 import { IconButton } from '../../../../shared/ui/Button';
 import { useMemo, useState } from 'react';
 import {
@@ -273,7 +274,7 @@ export function RequestsTable({ requests }: { requests: UsageRequest[] }) {
           </tbody>
         </table>
       </div>
-      <div className="flex items-center justify-between gap-3.75 border-t border-border px-4.25 py-3 text-[10px] text-muted max-[540px]:flex-col max-[540px]:items-stretch [&>div]:flex [&>div]:items-center [&>div]:gap-2.5 max-[540px]:[&>div]:justify-between max-[540px]:[&>div]:gap-1 [&_label]:flex [&_label]:items-center [&_label]:gap-1.75 max-[540px]:[&_label]:gap-1 max-[540px]:[&_label]:text-[9px] [&_select]:min-h-7 [&_select]:px-1.25 [&_select]:py-0.75 [&_select]:text-[10px]">
+      <div className="flex items-center justify-between gap-3.75 border-t border-border px-4.25 py-3 text-[10px] text-muted max-[540px]:flex-col max-[540px]:items-stretch [&>div]:flex [&>div]:items-center [&>div]:gap-2.5 max-[540px]:[&>div]:justify-between max-[540px]:[&>div]:gap-1 [&_label]:flex [&_label]:items-center [&_label]:gap-1.75 max-[540px]:[&_label]:gap-1 max-[540px]:[&_label]:text-[9px]">
         <span>
           {requests.length
             ? `${pageIndex * pageSize + 1}–${Math.min((pageIndex + 1) * pageSize, requests.length)} of ${requests.length}`
@@ -282,19 +283,16 @@ export function RequestsTable({ requests }: { requests: UsageRequest[] }) {
         <div>
           <label>
             Rows per page{' '}
-            <select
+            <Select
               aria-label="Rows per page"
               value={pageSize}
-              onChange={(event) =>
-                table.setPageSize(Number(event.target.value))
-              }
-            >
-              {[10, 25, 50, 100].map((size) => (
-                <option key={size} value={size}>
-                  {size}
-                </option>
-              ))}
-            </select>
+              onValueChange={table.setPageSize}
+              size="small"
+              options={[10, 25, 50, 100].map((value) => ({
+                value,
+                label: String(value),
+              }))}
+            />
           </label>
           <span>
             Page {requests.length ? pageIndex + 1 : 0} of {table.getPageCount()}

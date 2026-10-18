@@ -1,24 +1,41 @@
-import { Activity, CircleDollarSign, Clock3, Headphones } from 'lucide-react';
+import { Select } from '../../../../shared/ui/Select';
+import { useMemo, useState } from 'react';
 import { summarize } from '../../domain/analytics';
-import type { UsageRequest } from '../../domain/types';
-import { latency, money, number } from '../../../../shared/format';
+import { compactActivity } from '../../domain/activity';
+import type { UsageFilters, UsageRequest } from '../../domain/types';
+import {
+  audioDuration,
+  money,
+  number,
+  type AudioUnit,
+} from '../../../../shared/format';
+import { CardSparkline } from './CardSparkline';
 
-export function SummaryCards({ requests }: { requests: UsageRequest[] }) {
-  const summary = summarize(requests);
+export function SummaryCards({
+  requests,
+  filters,
+}: {
+  requests: UsageRequest[];
+  filters: UsageFilters;
+}) {
+  const [audioUnit, setAudioUnit] = useState<AudioUnit>('auto');
+  const summary = useMemo(() => summarize(requests), [requests]);
+  const buckets = useMemo(
+    () => compactActivity(requests, filters),
+    [requests, filters],
+  );
   const cards = [
     {
       title: 'Requests',
       value: number(summary.count),
-      note: 'In the current selection',
-      icon: Activity,
-      color: 'bg-[#edf7f3] text-teal',
+      note: 'Transcription and text enhancement requests',
+      values: buckets.map((bucket) => bucket.requests),
     },
     {
       title: 'Recorded spend',
-      value: money(summary.cost),
+      value: money(summary.cost, 2),
       note: `${summary.count - summary.missingCosts} of ${summary.count} with recorded cost · USD`,
-      icon: CircleDollarSign,
-      color: 'bg-[#edf7f3] text-teal',
+      values: buckets.map((bucket) => bucket.cost),
     },
     {
       title: 'Audio processed',
@@ -27,39 +44,44 @@ export function SummaryCards({ requests }: { requests: UsageRequest[] }) {
           ? summary.audioCount
             ? 'No data'
             : 'Not applicable'
-          : `${number(summary.minutes)} min`,
+          : audioDuration(summary.minutes * 60, audioUnit),
       note: `${summary.audioCount - summary.missingDurations} of ${summary.audioCount} audio requests with duration`,
-      icon: Headphones,
-      color: 'bg-[#eef3fb] text-[#5d86ba]',
-    },
-    {
-      title: 'Median latency',
-      value: latency(summary.medianLatency),
-      note: `${summary.knownLatencies} of ${summary.count} with latency`,
-      icon: Clock3,
-      color: 'bg-[#faf5eb] text-[#bd914e]',
+      values: buckets.map((bucket) => bucket.minutes),
     },
   ];
   return (
     <div
-      className="my-4.5 grid grid-cols-4 gap-3 max-[1150px]:grid-cols-2 max-[540px]:gap-2.25"
+      className="my-4.5 grid grid-cols-3 gap-3 max-[800px]:grid-cols-1"
       aria-label="Selection summary"
     >
-      {cards.map(({ title, value, note, icon: Icon, color }) => (
+      {cards.map(({ title, value, note, values }) => (
         <article
           key={title}
-          className="min-w-0 rounded-[10px] border border-border bg-white px-3.75 py-4 shadow-card max-[540px]:p-3.25"
+          className="relative min-h-40 min-w-0 overflow-hidden rounded-[10px] border border-border bg-white p-4.5 shadow-card"
         >
-          <div className="flex items-center justify-between gap-1 text-[11px] text-[#697787]">
-            {title}
-            <span className={`flex rounded-[7px] p-1.25 ${color}`}>
-              <Icon size={16} />
-            </span>
+          <CardSparkline values={values} />
+          <div className="relative z-10">
+            <div className="flex min-h-7 items-center justify-between gap-2 text-[12px] text-[#697787]">
+              <span>{title}</span>
+              {title === 'Audio processed' && (
+                <Select
+                  aria-label="Audio display unit"
+                  size="small"
+                  value={audioUnit}
+                  onValueChange={setAudioUnit}
+                  options={[
+                    { value: 'auto', label: 'Auto' },
+                    { value: 'minutes', label: 'Min' },
+                    { value: 'hours', label: 'Hours' },
+                  ]}
+                />
+              )}
+            </div>
+            <strong className="mt-2 mb-1 block text-[clamp(24px,2.6vw,34px)] leading-tight font-[650] tracking-[-0.7px] tabular-nums wrap-anywhere">
+              {value}
+            </strong>
+            <p className="mt-2 text-[10px] text-muted">{note}</p>
           </div>
-          <strong className="mt-1.75 mb-0.5 block text-[clamp(18px,1.9vw,27px)] leading-normal font-[650] tracking-[-0.7px] tabular-nums wrap-anywhere max-[1150px]:text-[27px] max-[540px]:text-[23px]">
-            {value}
-          </strong>
-          <p className="text-[10px] text-muted">{note}</p>
         </article>
       ))}
     </div>

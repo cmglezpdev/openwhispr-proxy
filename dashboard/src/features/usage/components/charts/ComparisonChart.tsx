@@ -1,3 +1,4 @@
+import { Select } from '../../../../shared/ui/Select';
 import { useMemo, useState } from 'react';
 import { barX, defineChart } from '@tanstack/charts';
 import { Chart } from '@tanstack/charts/react';
@@ -76,30 +77,34 @@ export function ComparisonChart({ requests }: { requests: UsageRequest[] }) {
           <h3>{by === 'model' ? 'Usage by model' : 'Usage by operation'}</h3>
         </div>
       </div>
-      <div className="flex gap-1.75 max-[1150px]:flex-wrap [&_select]:min-h-7.5 [&_select]:px-1.5 [&_select]:py-1 [&_select]:text-[11px] max-[540px]:[&_select]:text-[10px] mt-3.5">
+      <div className="flex gap-1.75 max-[1150px]:flex-wrap mt-3.5">
         <label className="sr-only" htmlFor="comparison-by">
           Compare by
         </label>
-        <select
+        <Select
           id="comparison-by"
           value={by}
-          onChange={(event) => setBy(event.target.value as 'model' | 'kind')}
-        >
-          <option value="model">By model</option>
-          <option value="kind">By operation</option>
-        </select>
+          onValueChange={setBy}
+          size="compact"
+          options={[
+            { value: 'model', label: 'By model' },
+            { value: 'kind', label: 'By operation' },
+          ]}
+        />
         <label className="sr-only" htmlFor="comparison-metric">
           Comparison metric
         </label>
-        <select
+        <Select
           id="comparison-metric"
           value={metric}
-          onChange={(event) => setMetric(event.target.value as Metric)}
-        >
-          <option value="requests">Requests</option>
-          <option value="cost">Spend, USD</option>
-          <option value="minutes">Audio, minutes</option>
-        </select>
+          onValueChange={setMetric}
+          size="compact"
+          options={[
+            { value: 'requests', label: 'Requests' },
+            { value: 'cost', label: 'Spend, USD' },
+            { value: 'minutes', label: 'Audio, minutes' },
+          ]}
+        />
       </div>
       {data.length ? (
         <div className="max-h-67.75 overflow-y-auto max-[800px]:max-h-75">

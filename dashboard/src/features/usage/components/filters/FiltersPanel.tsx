@@ -1,3 +1,4 @@
+import { Select } from '../../../../shared/ui/Select';
 import { FormField } from '../../../../shared/ui/FormField';
 import { Button } from '../../../../shared/ui/Button';
 import { useId } from 'react';
@@ -90,16 +91,15 @@ export function FiltersPanel({
         </FormField>
         <FormField>
           Operation
-          <select
+          <Select
             value={filters.kind}
-            onChange={(event) =>
-              update('kind', event.target.value as UsageFilters['kind'])
-            }
-          >
-            <option value="all">All</option>
-            <option value="transcription">Transcription</option>
-            <option value="enhancement">Text enhancement</option>
-          </select>
+            onValueChange={(value) => update('kind', value)}
+            options={[
+              { value: 'all', label: 'All' },
+              { value: 'transcription', label: 'Transcription' },
+              { value: 'enhancement', label: 'Text enhancement' },
+            ]}
+          />
         </FormField>
       </div>
       <div className="flex items-center justify-between gap-2.5 py-3.25 max-[540px]:flex-wrap">
@@ -171,20 +171,16 @@ export function FiltersPanel({
             />
             <FormField className="mt-3" htmlFor={`${id}-cost`}>
               Cost availability
-              <select
+              <Select
                 id={`${id}-cost`}
                 value={filters.costAvailability}
-                onChange={(event) =>
-                  update(
-                    'costAvailability',
-                    event.target.value as UsageFilters['costAvailability'],
-                  )
-                }
-              >
-                <option value="all">All</option>
-                <option value="known">With recorded cost</option>
-                <option value="unknown">Without recorded cost</option>
-              </select>
+                onValueChange={(value) => update('costAvailability', value)}
+                options={[
+                  { value: 'all', label: 'All' },
+                  { value: 'known', label: 'With recorded cost' },
+                  { value: 'unknown', label: 'Without recorded cost' },
+                ]}
+              />
             </FormField>
           </div>
           <div>

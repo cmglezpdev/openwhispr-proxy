@@ -1,3 +1,4 @@
+import { Select } from '../../../../shared/ui/Select';
 import type { NumberFilter } from '../../domain/types';
 
 interface Props {
@@ -10,21 +11,23 @@ export function NumberRange({ label, value, onChange }: Props) {
   return (
     <fieldset className="[&+fieldset]:mt-3.75">
       <legend>{label}</legend>
-      <div className="flex items-center gap-1.25 [&_input]:w-20 [&_input]:flex-1 max-[540px]:[&_input]:w-17.5 [&_select]:w-23.75 [&_select]:text-[11px] [&_span]:text-[11px] [&_span]:text-muted">
-        <select
+      <div className="flex items-center gap-1.25 [&_input]:w-20 [&_input]:flex-1 max-[540px]:[&_input]:w-17.5 [&_span]:text-[11px] [&_span]:text-muted">
+        <Select
+          className="w-30 shrink-0 text-[11px]"
           aria-label={`${label}: condition`}
           value={value.operator}
-          onChange={(event) =>
+          onValueChange={(operator) =>
             onChange({
               ...value,
-              operator: event.target.value as NumberFilter['operator'],
+              operator,
             })
           }
-        >
-          <option value="between">Between</option>
-          <option value="gt">Greater than</option>
-          <option value="lt">Less than</option>
-        </select>
+          options={[
+            { value: 'between', label: 'Between' },
+            { value: 'gt', label: 'Greater than' },
+            { value: 'lt', label: 'Less than' },
+          ]}
+        />
         <input
           aria-label={`${label}: ${value.operator === 'between' ? 'minimum' : 'value'}`}
           type="number"
