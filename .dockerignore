@@ -2,6 +2,8 @@ data/
 .atl/
 .dist/
 node_modules/
+**/node_modules/
+**/dist/
 test/
 
 .dockerignore
