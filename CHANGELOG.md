@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.2.0](https://github.com/cmglezpdev/openwhispr-proxy/compare/v0.1.0...v0.2.0) (2026-10-18)
+
+
+### 🚀 Features
+
+* **dashboard:** add local usage dashboard and analytics ([#5](https://github.com/cmglezpdev/openwhispr-proxy/issues/5)) ([6a01a1a](https://github.com/cmglezpdev/openwhispr-proxy/commit/6a01a1a851f471f2ccf2b2d594f163209383303c))
+
+
+### 🧹 Miscellaneous Chores
+
+* add OrbStack icons and README banner ([#4](https://github.com/cmglezpdev/openwhispr-proxy/issues/4)) ([5358b68](https://github.com/cmglezpdev/openwhispr-proxy/commit/5358b6869c1424c8831f1afd6a330044c5c65903))
+* **release:** add missing release-please manifest ([#6](https://github.com/cmglezpdev/openwhispr-proxy/issues/6)) ([0895759](https://github.com/cmglezpdev/openwhispr-proxy/commit/08957596734d441b3c5a92475a68d65feee09eb1))
+
 ## 0.1.0 (2026-08-07)
 
 
