@@ -1,0 +1,63 @@
+.request-dialog {
+  width: min(760px, calc(100% - 30px));
+  max-height: 88vh;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 0;
+  color: var(--text);
+  box-shadow: 0 20px 90px #152a3c40;
+}
+.request-dialog::backdrop {
+  background: #182f4260;
+  backdrop-filter: blur(3px);
+}
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px 25px;
+  gap: 15px;
+  border-bottom: 1px solid var(--border);
+}
+.dialog-header h2 {
+  margin-top: 5px;
+  font-size: 19px;
+  overflow-wrap: anywhere;
+}
+.detail-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin: 0;
+  padding: 20px 25px;
+  gap: 16px;
+}
+.detail-fields dt {
+  color: var(--muted);
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+.detail-fields dd {
+  margin: 0;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.detail-text,
+.detail-text h3 {
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+.detail-text pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.8;
+  margin: 0;
+}
+.dialog-footer {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 14px 25px;
+  background: white;
+  border-top: 1px solid var(--border);
+}
