@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/cmglezpdev/openwhispr-proxy/compare/v0.2.0...v0.3.0) (2026-10-18)
+
+
+### 🚀 Features
+
+* **docker:** publish release images to GHCR ([#9](https://github.com/cmglezpdev/openwhispr-proxy/issues/9)) ([9b6693b](https://github.com/cmglezpdev/openwhispr-proxy/commit/9b6693ba1acabd69e91e8bd4aab1e310fec10a79))
+
 ## [0.2.0](https://github.com/cmglezpdev/openwhispr-proxy/compare/v0.1.0...v0.2.0) (2026-10-18)
 
 
