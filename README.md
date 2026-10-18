@@ -139,6 +139,13 @@ pnpm build
 
 For individual suites, use `pnpm test`, `pnpm test:e2e` or `pnpm test:dashboard`.
 
+### CI and releases
+
+The server and dashboard are one application with one version and one GitHub
+release. The root `package.json` defines the version. Release Please updates both
+package files, `CHANGELOG.md` and `.release-please-manifest.json` in the same PR.
+`pnpm check:version` checks that both package versions match.
+
 ## Local-use limits
 
 The proxy is intended for a single user's local workflow. The dashboard exposes saved text and usage history without authentication. Compose restricts the published port to localhost. When running directly with Node, the server listens on all interfaces; use a host firewall or bind it to localhost before relying on local-only access. Changing the Docker port mapping or adding a tunnel can expose the history to other machines.
