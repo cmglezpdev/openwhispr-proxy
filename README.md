@@ -6,15 +6,15 @@ OpenAI-compatible proxy that sits between [OpenWhispr](https://github.com/openwh
 
 ## Endpoints
 
-| Method | Path                     | Purpose                                                      |
-| ------ | ------------------------ | -------------------------------------------------------------- |
-| POST   | `/audio/transcriptions`  | Proxies audio transcription requests (Whisper-style)           |
-| POST   | `/v1/chat/completions`   | Proxies chat completion requests (transcript cleanup, etc.)    |
-| GET    | `/models`                | Returns the live model catalog from the AI Gateway             |
+| Method | Path                    | Purpose                                                     |
+| ------ | ----------------------- | ----------------------------------------------------------- |
+| POST   | `/audio/transcriptions` | Proxies audio transcription requests (Whisper-style)        |
+| POST   | `/v1/chat/completions`  | Proxies chat completion requests (transcript cleanup, etc.) |
+| GET    | `/models`               | Returns the live model catalog from the AI Gateway          |
 
-All routes expect a standard `Authorization: Bearer <AI_GATEWAY_API_KEY>` header — the proxy has no server-side API key configuration; each request carries its own.
+The three proxy routes expect a standard `Authorization: Bearer <AI_GATEWAY_API_KEY>` header — the proxy has no server-side API key configuration; each request carries its own.
 
-> **Concurrency note:** the API key from the incoming request is currently applied via a shared `process.env.AI_GATEWAY_API_KEY` assignment before each Gateway call. Under concurrent requests using *different* keys, this can race. Fine for single-user/local use; worth knowing if you expose this to multiple simultaneous clients. This is unrelated to app configuration below — it's a per-request value, not a static setting, so it's not something you set in `.env`.
+> **Concurrency note:** the API key from the incoming request is currently applied via a shared `process.env.AI_GATEWAY_API_KEY` assignment before each Gateway call. Under concurrent requests using _different_ keys, this can race. Fine for single-user/local use; worth knowing if you expose this to multiple simultaneous clients. This is unrelated to app configuration below — it's a per-request value, not a static setting, so it's not something you set in `.env`.
 
 ## Configuration
 
@@ -24,16 +24,16 @@ The app reads its configuration from environment variables via a typed `EnvServi
 cp .env.example .env
 ```
 
-| Variable         | Required | Default                       | Purpose                                  |
-| ---------------- | -------- | ------------------------------ | ----------------------------------------- |
-| `PORT`           | No       | `8080`                        | Port the HTTP server listens on           |
-| `USAGE_DB_PATH`  | No       | `<project-root>/data/usage.db` | Absolute path to the SQLite usage database |
+| Variable        | Required | Default                        | Purpose                                    |
+| --------------- | -------- | ------------------------------ | ------------------------------------------ |
+| `PORT`          | No       | `8080`                         | Port the HTTP server listens on            |
+| `USAGE_DB_PATH` | No       | `<project-root>/data/usage.db` | Absolute path to the SQLite usage database |
 
 `.env` is loaded automatically on startup (via `dotenv`) — Node does not do this on its own.
 
 ## Running locally (no Docker)
 
-Requires Node 22+ and [pnpm](https://pnpm.io/).
+Requires Node 24+ and [pnpm](https://pnpm.io/).
 
 ```bash
 pnpm install
@@ -85,14 +85,26 @@ docker compose down
 
 The volume is a bind mount to `./data`, so `docker compose down` does **not** delete your usage data — only removing the `./data` folder yourself would.
 
+## Local dashboard
+
+Open [http://localhost:8080/dashboard](http://localhost:8080/dashboard), replacing the port if configured. The existing server serves the React application and `GET /dashboard/api/requests` from the same Docker image. These local dashboard routes do not require an API key.
+
+The page loads the complete SQLite history once. Search, date ranges, operation, model, cost, audio duration and latency filters run in the browser. Sorting and pagination affect the table; summaries and charts use all matching rows. Use **Linked to table** to separate dashboard filters, then link again to adopt the table selection. Reload the page to fetch new records.
+
+Costs and durations can be unavailable. Totals include only recorded values and show their coverage. The stored history has no token counters, so the dashboard does not display token metrics. Only completed operations from the original usage tables are included.
+
+For frontend development, run `pnpm start:dev` and `pnpm dev:dashboard` in separate terminals. Open the Vite URL at `/dashboard/`; its API proxy uses `PORT`, defaulting to 8080. `pnpm build` builds both the server and frontend for production. See [dashboard/README.md](dashboard/README.md) for module organization.
+
 ## Usage / cost tracking
 
-Every request to `/audio/transcriptions` and `/v1/chat/completions` is logged to a SQLite database at `./data/usage.db` (created automatically on first run), with two tables:
+Every successful request to `/audio/transcriptions` and `/v1/chat/completions` is logged to a SQLite database at `./data/usage.db` (created automatically on first run), with two tables:
 
 - `transcriptions` — `model`, `duration_seconds`, `text`, `latency_ms`, `cost_usd`, `generation_id`, `created_at`
 - `enhanced_transcriptions` — `model`, `text`, `latency_ms`, `cost_usd`, `generation_id`, `created_at`
 
-There is currently no HTTP endpoint to query this — check it directly with the `sqlite3` CLI:
+The dashboard endpoint returns both tables with a stable key per row and explicit UTC timestamps. The UI groups dates in the browser timezone, with weeks starting on Monday. Rows retain the recorded provider-call latency. Dashboard traffic is excluded from usage tracking.
+
+You can also inspect the history with the `sqlite3` CLI:
 
 ```bash
 sqlite3 data/usage.db "SELECT model, COUNT(*), SUM(cost_usd) FROM transcriptions GROUP BY model;"
@@ -114,10 +126,10 @@ OpenWhispr calls two separate services, and **both** must be pointed at the prox
 
 In OpenWhispr, open **Settings → Speech to Text**, choose the **Custom** provider and fill in:
 
-| Field    | Value                                                     |
-| -------- | --------------------------------------------------------- |
-| Endpoint | `http://localhost:8080`                                   |
-| API Key  | your Vercel AI Gateway API key                            |
+| Field    | Value                                                       |
+| -------- | ----------------------------------------------------------- |
+| Endpoint | `http://localhost:8080`                                     |
+| API Key  | your Vercel AI Gateway API key                              |
 | Model    | a transcription model, e.g. `openai/gpt-4o-mini-transcribe` |
 
 This is the audio-to-text step. OpenWhispr will hit `POST /audio/transcriptions` on the proxy, which forwards it to the AI Gateway.
@@ -130,10 +142,10 @@ This second model polishes what the transcription returned — punctuation, ques
 
 In **Settings → Language Model**, again choose **Custom**:
 
-| Field    | Value                                                                |
-| -------- | -------------------------------------------------------------------- |
-| Endpoint | `http://localhost:8080`                                              |
-| API Key  | your Vercel AI Gateway API key (the same one)                        |
+| Field    | Value                                                                 |
+| -------- | --------------------------------------------------------------------- |
+| Endpoint | `http://localhost:8080`                                               |
+| API Key  | your Vercel AI Gateway API key (the same one)                         |
 | Model    | a fast, non-reasoning chat model, e.g. `google/gemini-2.5-flash-lite` |
 
 This step hits `POST /v1/chat/completions` on the proxy.
@@ -146,19 +158,18 @@ Both steps use the **same endpoint and the same API key** — only the model dif
 
 `openai/whisper-1` is the legacy model and the usual suspect when transcripts contain words that were never spoken. Whisper was trained on subtitled video, so on silence or low-energy audio it fills the gap with phrases from its training data instead of returning nothing ([OpenWhispr #462](https://github.com/OpenWhispr/openwhispr/issues/462), [openai/whisper #679](https://github.com/openai/whisper/discussions/679)).
 
-| Model                            | Price (OpenAI list)     | Notes                                             |
-| -------------------------------- | ----------------------- | ------------------------------------------------- |
-| `openai/gpt-4o-mini-transcribe`  | $0.003/min              | Good default — lower WER than Whisper, few hallucinations |
-| `openai/gpt-4o-transcribe`       | $0.006/min              | Heavy accents or noisy audio; best accuracy       |
-
+| Model                           | Price (OpenAI list) | Notes                                                     |
+| ------------------------------- | ------------------- | --------------------------------------------------------- |
+| `openai/gpt-4o-mini-transcribe` | $0.003/min          | Good default — lower WER than Whisper, few hallucinations |
+| `openai/gpt-4o-transcribe`      | $0.006/min          | Heavy accents or noisy audio; best accuracy               |
 
 ### Transcript cleanup
 
 Cleanup is a trivial task: add punctuation, fix casing. It does not benefit from a reasoning model — it only pays for one.
 
-| Model                            | Price (in/out per 1M)   | Notes                                            |
-| -------------------------------- | ----------------------- | ------------------------------------------------ |
-| `google/gemini-2.5-flash-lite`   | $0.10 / $0.40           | Good default — cheap, fast, no reasoning tokens  |
+| Model                          | Price (in/out per 1M) | Notes                                           |
+| ------------------------------ | --------------------- | ----------------------------------------------- |
+| `google/gemini-2.5-flash-lite` | $0.10 / $0.40         | Good default — cheap, fast, no reasoning tokens |
 
 Gemini 2.5 Flash lite is a ultra fasy model, with low latency and it's enough to adding punctuation, fix casting, etc.
 
@@ -174,4 +185,8 @@ Gemini 2.5 Flash lite is a ultra fasy model, with low latency and it's enough to
 pnpm test
 pnpm test:e2e
 pnpm test:cov
+pnpm test:dashboard
+pnpm lint:dashboard
 ```
+
+The HTTP suite builds the frontend and verifies that the same Nest server serves the compiled HTML and assets. Unit and HTTP tests use temporary databases; outbound SDK calls in Jest are mocked.

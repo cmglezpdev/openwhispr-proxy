@@ -6,7 +6,7 @@
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
-    "build": "nest build",
+    "build": "pnpm build:server && pnpm --dir dashboard build",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",
     "start:dev": "nest start --watch",
@@ -17,8 +17,12 @@
     "test:watch": "jest --watch",
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
-    "test:e2e": "jest --config ./test/jest-e2e.json",
-    "test:all": "pnpm test && pnpm test:e2e"
+    "test:e2e": "pnpm --dir dashboard build && jest --config ./test/jest-e2e.json",
+    "test:all": "pnpm test && pnpm test:e2e && pnpm test:dashboard",
+    "build:server": "nest build",
+    "dev:dashboard": "pnpm --dir dashboard dev",
+    "test:dashboard": "pnpm --dir dashboard test",
+    "lint:dashboard": "pnpm --dir dashboard lint"
   },
   "dependencies": {
     "@ai-sdk/gateway": "^4.0.27",
@@ -28,6 +32,7 @@
     "@nestjs/platform-express": "^11.0.1",
     "ai": "^7.0.35",
     "dotenv": "^17.4.2",
+    "express": "^5.2.1",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1"
   },

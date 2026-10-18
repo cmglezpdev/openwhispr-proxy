@@ -1,2 +1,5 @@
+packages:
+  - dashboard
+
 allowBuilds:
   unrs-resolver: true
