@@ -50,7 +50,7 @@ export function ActivityHeatmap({
   const dataWeeks = Math.ceil((days.length + offset) / 7);
   // Fill available space with earlier, out-of-range weeks. Keep the last day
   // in the rightmost column without changing its weekday or the selected range.
-  const weeks = Math.max(dataWeeks, Math.ceil((calendarWidth - 34) / 36), 1);
+  const weeks = Math.max(dataWeeks, Math.ceil((calendarWidth - 46) / 36), 1);
   const leadingWeeks = weeks - dataWeeks;
   const lastDate = days.at(-1)?.date;
   useLayoutEffect(() => {
@@ -141,10 +141,10 @@ export function ActivityHeatmap({
       >
         {days.length ? (
           <div
-            className="grid gap-1"
+            className="grid gap-1 p-1.5"
             style={{
               gridTemplateColumns: `30px repeat(${weeks}, minmax(16px, 1fr))`,
-              minWidth: 34 + weeks * 20,
+              minWidth: 46 + weeks * 20,
             }}
           >
             {monthLabels.map(([week, label]) => (
