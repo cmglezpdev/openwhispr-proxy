@@ -139,6 +139,30 @@ pnpm build
 
 For individual suites, use `pnpm test`, `pnpm test:e2e` or `pnpm test:dashboard`.
 
+### CI and releases
+
+The server and dashboard are one application with one version and one GitHub
+release. The root `package.json` defines the version. Release Please updates both
+package files, `CHANGELOG.md` and `.release-please-manifest.json` in the same PR.
+`pnpm check:version` checks that both package versions match.
+
+The `CI` workflow runs on pull requests, pushes to `main` and manual dispatches.
+It installs the locked dependencies, checks versions, lints both packages, runs
+all test suites and builds the application on Node.js 24.
+`pnpm lint:check` checks server lint
+without modifying files; `pnpm lint` remains available to apply fixes locally.
+
+After all checks pass on `main`, Release Please prepares a release PR from
+Conventional Commits such as `feat: ...` and `fix: ...`. Merging that PR publishes
+the tag and GitHub release after CI passes again. The workflow explicitly
+dispatches CI on generated release branches because PRs created with
+`GITHUB_TOKEN` do not trigger `pull_request` workflows. No extra token is needed.
+
+In GitHub branch protection or a ruleset for `main`, require
+`Application / Node 24` before merging. Workflow files alone do
+not enforce merge restrictions. Releases contain the source tag and changelog;
+the Docker image is built locally with Compose.
+
 ## Local-use limits
 
 The proxy is intended for a single user's local workflow. The dashboard exposes saved text and usage history without authentication. Compose restricts the published port to localhost. When running directly with Node, the server listens on all interfaces; use a host firewall or bind it to localhost before relying on local-only access. Changing the Docker port mapping or adding a tunnel can expose the history to other machines.
