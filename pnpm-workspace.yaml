@@ -1,2 +1,6 @@
+packages:
+  - dashboard
+
 allowBuilds:
+  '@parcel/watcher': true
   unrs-resolver: true

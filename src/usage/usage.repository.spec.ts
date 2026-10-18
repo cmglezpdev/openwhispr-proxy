@@ -123,6 +123,71 @@ describe('UsageRepository', () => {
     });
   });
 
+  describe('dashboard history', () => {
+    it('reads both original tables with unique keys and UTC timestamps', () => {
+      repository!.saveTranscription({
+        model: 'audio/model',
+        text: 'transcript',
+        durationSeconds: 60,
+        latencyMs: 100,
+        costUsd: '0',
+        generationId: null,
+      });
+      repository!.saveEnhancedTranscription({
+        model: 'text/model',
+        text: 'enhanced',
+        latencyMs: 200,
+        costUsd: null,
+        generationId: 'gen_1',
+      });
+      const rows = repository!.listRequests();
+      expect(rows).toHaveLength(2);
+      expect(new Set(rows.map((row) => row.key))).toEqual(
+        new Set(['transcription:1', 'enhancement:1']),
+      );
+      expect(rows.every((row) => row.createdAt.endsWith('Z'))).toBe(true);
+      expect(rows.find((row) => row.kind === 'transcription')).toMatchObject({
+        text: 'transcript',
+        durationSeconds: 60,
+        costUsd: 0,
+      });
+      expect(rows.find((row) => row.kind === 'enhancement')).toMatchObject({
+        text: 'enhanced',
+        durationSeconds: null,
+        costUsd: null,
+      });
+    });
+
+    it('reads existing databases marked with a later schema version', () => {
+      repository!.saveEnhancedTranscription({
+        model: 'text/model',
+        text: 'preserved',
+        latencyMs: 100,
+        costUsd: null,
+        generationId: null,
+      });
+      inspect((db) => db.exec('PRAGMA user_version = 4'));
+      expect(openRepository().listRequests()).toEqual([
+        expect.objectContaining({ text: 'preserved', key: 'enhancement:1' }),
+      ]);
+    });
+
+    it('creates only the original two usage tables', () => {
+      const tables = inspect((db) =>
+        db
+          .prepare(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'",
+          )
+          .all()
+          .map((row) => row.name),
+      );
+      expect(tables.sort()).toEqual([
+        'enhanced_transcriptions',
+        'transcriptions',
+      ]);
+    });
+  });
+
   describe('saveTranscription', () => {
     it('stores every field of the record', () => {
       repository!.saveTranscription({

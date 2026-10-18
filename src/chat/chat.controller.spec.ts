@@ -1,4 +1,4 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, Logger } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { assertProviderModelFormat as sdkAssertProviderModelFormat } from 'src/common/provider-model.validator';
 import { ChatController } from './chat.controller';
@@ -70,6 +70,25 @@ describe('ChatController', () => {
         chatTemplateKwargs: { thinking: false },
       },
     );
+  });
+
+  it('logs request metadata without message content', async () => {
+    const log = jest
+      .spyOn(Logger.prototype, 'log')
+      .mockImplementation(() => {});
+    try {
+      await controller.completions('Bearer secret-key', {
+        model: 'openai/gpt-4o-mini',
+        messages,
+      });
+
+      expect(log).toHaveBeenCalledTimes(1);
+      expect(log).toHaveBeenCalledWith(
+        'Incoming chat completion request: model=openai/gpt-4o-mini, messages=2',
+      );
+    } finally {
+      log.mockRestore();
+    }
   });
 
   it('rejects a request without a model', async () => {

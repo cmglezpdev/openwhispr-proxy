@@ -1,7 +1,13 @@
 data/
+.git/
+.env
+.env.*
+!.env.example
 .atl/
 .dist/
 node_modules/
+**/node_modules/
+**/dist/
 test/
 
 .dockerignore

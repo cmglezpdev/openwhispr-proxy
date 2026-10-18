@@ -1,0 +1,82 @@
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'SFMono-Regular', Consolas, monospace;
+  --color-page: #f6f8fa;
+  --color-text: #202e3b;
+  --color-muted: #73808e;
+  --color-border: #e4e9ed;
+  --color-teal: #137d70;
+  --color-teal-light: #eaf5f1;
+  --color-rose: #bd4b5a;
+  --shadow-card: 0 2px 4px #1c344405;
+}
+
+/* Document defaults and native controls. View-specific styles live in JSX. */
+@layer base {
+  html {
+    @apply scroll-smooth scroll-pt-21.25 motion-reduce:scroll-auto;
+  }
+
+  body {
+    @apply m-0 min-w-90 bg-page font-sans text-[14px] leading-normal text-text antialiased;
+  }
+
+  button,
+  input,
+  select {
+    font: inherit;
+  }
+
+  button,
+  summary,
+  select {
+    @apply cursor-pointer;
+  }
+
+  button:disabled {
+    @apply cursor-default opacity-35;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-[3px] outline-teal;
+  }
+
+  input {
+    @apply min-h-8.75 max-w-full rounded-[7px] border border-border bg-white px-2.25 py-1.5 text-text;
+  }
+
+  input {
+    @apply min-w-0 placeholder:text-[#939caa];
+  }
+
+  input[type='checkbox'] {
+    @apply min-h-0 accent-teal;
+  }
+
+  h2 {
+    @apply text-[18px] font-[650] tracking-[-0.4px];
+  }
+
+  h3 {
+    @apply text-[15px] font-[650] tracking-[-0.2px];
+  }
+
+  fieldset {
+    @apply m-0 min-w-0 border-0 p-0;
+  }
+
+  legend {
+    @apply mb-2 p-0 text-[12px] font-[550];
+  }
+
+  code,
+  pre {
+    @apply font-mono text-[12px];
+  }
+
+  ::selection {
+    @apply bg-[#c3e6dd];
+  }
+}

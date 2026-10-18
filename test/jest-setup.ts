@@ -19,7 +19,11 @@ jest.mock('ai', () => ({
 }));
 
 jest.mock('@ai-sdk/gateway', () => ({
-  createGateway: jest.fn(),
+  createGateway: jest.fn(({ apiKey }: { apiKey: string }) =>
+    Object.assign((modelId: string) => ({ modelId, apiKey }), {
+      transcriptionModel: (modelId: string) => ({ modelId, apiKey }),
+    }),
+  ),
 }));
 
 // Keep the reporter readable: application logs (including the expected error

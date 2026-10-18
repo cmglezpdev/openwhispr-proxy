@@ -12,6 +12,7 @@ import {
   transcribe as sdkTranscribe,
 } from 'ai';
 import { AppModule } from '../src/app.module';
+import type { UsageSnapshot } from '../src/usage/domain/usage-request';
 
 /** Shape of the Nest error payload asserted by the failure-path tests. */
 interface ErrorBody {
@@ -120,11 +121,16 @@ describe('openwhispr-proxy (e2e)', () => {
       ],
     });
 
-    createGateway.mockReset().mockReturnValue({
-      getAvailableModels: jest
-        .fn()
-        .mockResolvedValue({ models: [{ id: 'openai/gpt-4o-mini' }] }),
-    });
+    createGateway
+      .mockReset()
+      .mockImplementation(({ apiKey }: { apiKey: string }) =>
+        Object.assign((modelId: string) => ({ modelId, apiKey }), {
+          transcriptionModel: (modelId: string) => ({ modelId, apiKey }),
+          getAvailableModels: jest.fn().mockResolvedValue({
+            models: [{ id: 'openai/gpt-4o-mini' }],
+          }),
+        }),
+      );
   });
 
   describe('POST /audio/transcriptions', () => {
@@ -160,6 +166,58 @@ describe('openwhispr-proxy (e2e)', () => {
 
       const [{ audio }] = transcribe.mock.calls[0] as [{ audio: Buffer }];
       expect(audio.toString()).toBe('fake audio');
+    });
+
+    it('rejects files larger than 100 MiB before calling the gateway', async () => {
+      const before = countRows('transcriptions');
+      await post()
+        .field('model', 'openai/whisper-1')
+        .attach('file', Buffer.alloc(100 * 1024 * 1024 + 1), 'large.wav')
+        .expect(413);
+
+      expect(transcribe).not.toHaveBeenCalled();
+      expect(countRows('transcriptions')).toBe(before);
+    });
+
+    it('rejects extra files before calling the gateway', async () => {
+      await post()
+        .field('model', 'openai/whisper-1')
+        .attach('file', Buffer.from('audio'), 'first.wav')
+        .attach('file', Buffer.from('audio'), 'second.wav')
+        .expect(400);
+
+      expect(transcribe).not.toHaveBeenCalled();
+    });
+
+    it('accepts additional text fields and a different file field name', async () => {
+      await post()
+        .field('model', 'openai/whisper-1')
+        .field('language', 'es')
+        .field('prompt', 'Some context')
+        .attach('audio', Buffer.from('audio'), 'sample.webm')
+        .expect(201);
+
+      expect(transcribe).toHaveBeenCalledTimes(1);
+    });
+
+    it('rejects too many text fields before calling the gateway', async () => {
+      const submission = post().field('model', 'openai/whisper-1');
+      for (let i = 0; i < 16; i++) submission.field(`extra${i}`, 'value');
+      await submission
+        .attach('file', Buffer.from('audio'), 'sample.wav')
+        .expect(400);
+
+      expect(transcribe).not.toHaveBeenCalled();
+    });
+
+    it('rejects oversized text fields before calling the gateway', async () => {
+      await post()
+        .field('model', 'openai/whisper-1')
+        .field('prompt', 'a'.repeat(1024 * 1024 + 1))
+        .attach('file', Buffer.from('audio'), 'sample.wav')
+        .expect(400);
+
+      expect(transcribe).not.toHaveBeenCalled();
     });
 
     it('falls back to the file duration when the gateway omits it', async () => {
@@ -356,5 +414,61 @@ describe('openwhispr-proxy (e2e)', () => {
 
   it('returns 404 for an unknown route', async () => {
     await request(app.getHttpServer()).get('/nope').expect(404);
+  });
+  describe('dashboard history', () => {
+    it('returns the persisted history and leaves it unchanged after invalid requests', async () => {
+      const history = async (): Promise<UsageSnapshot> => {
+        const response = await request(app.getHttpServer())
+          .get('/dashboard/api/requests')
+          .expect(200)
+          .expect('Cache-Control', 'no-store');
+        return response.body as UsageSnapshot;
+      };
+      const before = await history();
+      await request(app.getHttpServer())
+        .post('/v1/chat/completions')
+        .send({ messages: [] })
+        .expect(400);
+      await request(app.getHttpServer())
+        .post('/audio/transcriptions')
+        .field('model', 'openai/whisper-1')
+        .expect(400);
+      const after = await history();
+      expect(after.requests).toEqual(before.requests);
+      expect(typeof after.loadedAt).toBe('string');
+      expect(after.requests.length).toBe(
+        countRows('transcriptions') + countRows('enhanced_transcriptions'),
+      );
+      for (const row of after.requests) {
+        expect(Object.keys(row).sort()).toEqual(
+          [
+            'key',
+            'id',
+            'kind',
+            'createdAt',
+            'model',
+            'text',
+            'costUsd',
+            'generationId',
+            'latencyMs',
+            'durationSeconds',
+          ].sort(),
+        );
+      }
+    });
+    it('serves the Vite HTML and its compiled assets from the existing server', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/dashboard')
+        .expect(200)
+        .expect('Content-Type', /html/);
+      const asset = response.text.match(
+        /src="(\/dashboard\/assets\/[^"]+\.js)"/,
+      );
+      expect(asset).not.toBeNull();
+      await request(app.getHttpServer())
+        .get(asset![1])
+        .expect(200)
+        .expect('Content-Type', /javascript/);
+    });
   });
 });
