@@ -1,3 +1,4 @@
+import { Button } from './shared/ui/Button';
 import { useMemo, useReducer } from 'react';
 import { Activity, AudioLines, Link2, RefreshCw, Unlink2 } from 'lucide-react';
 import {
@@ -13,7 +14,6 @@ import { TimelineChart } from './features/usage/components/charts/TimelineChart'
 import { ComparisonChart } from './features/usage/components/charts/ComparisonChart';
 import { RequestsTable } from './features/usage/components/table/RequestsTable';
 import { dateTime } from './shared/format';
-import './styles/dashboard.css';
 
 export default function App() {
   const { snapshot, error } = useUsage(loadUsage);
@@ -38,59 +38,75 @@ export default function App() {
   );
   return (
     <>
-      <header className="topbar">
-        <a href="#overview" className="brand">
-          <span className="brand-icon">
+      <header className="flex h-17 items-center gap-10.5 border-b border-border bg-white px-[4%] max-[800px]:gap-5.5 max-[540px]:h-15 max-[540px]:gap-3.75 max-[540px]:px-4.25">
+        <a
+          href="#overview"
+          className="flex items-center gap-2.25 text-[17px] font-[720] tracking-[-0.5px] max-[540px]:text-[15px]"
+        >
+          <span className="grid size-8.25 place-items-center rounded-[10px] bg-teal text-white">
             <AudioLines size={22} />
           </span>
-          OpenWhispr <span className="brand-product">Proxy</span>
+          OpenWhispr{' '}
+          <span className="ml-0.5 border-l border-border pl-2.5 text-[14px] font-[450] tracking-normal text-muted max-[540px]:hidden">
+            Proxy
+          </span>
         </a>
-        <nav aria-label="Sections">
+        <nav
+          className="flex gap-6.25 text-[13px] text-muted max-[540px]:hidden [&_a:hover]:text-teal"
+          aria-label="Sections"
+        >
           <a href="#overview">Overview</a>
           <a href="#requests">Requests</a>
         </nav>
-        <span className="local-badge">
+        <span className="ml-auto flex items-center gap-1.75 rounded-full border border-border px-2.5 py-1 text-[11px] text-muted max-[540px]:text-[10px] [&>span]:size-1.5 [&>span]:rounded-full [&>span]:bg-[#29a27d]">
           <span />
           Local session
         </span>
       </header>
-      <main className="workspace">
-        <div className="page-heading">
+      <main className="mx-auto max-w-375 px-[4%] pt-9.5 pb-5 max-[800px]:pt-6.25 max-[540px]:px-3.75">
+        <div className="mb-6.25 flex items-center justify-between gap-5 max-[540px]:flex-col max-[540px]:items-start max-[540px]:gap-3.75">
           <div>
-            <div className="eyebrow">
+            <div className="flex items-center gap-1.75 text-[10px] font-[650] tracking-[1.5px] mb-2 text-teal">
               <Activity size={13} />
               PROXY ACTIVITY
             </div>
-            <h1>Your history, in perspective.</h1>
-            <p>Explore your requests and understand your usage.</p>
+            <h1 className="text-[clamp(25px,3vw,32px)] leading-tight font-[650] tracking-[-1.1px] max-[540px]:text-[27px]">
+              Your history, in perspective.
+            </h1>
+            <p className="mt-2 text-[13px] text-muted">
+              Explore your requests and understand your usage.
+            </p>
           </div>
-          <button
-            className="button refresh-button"
+          <Button
+            className="max-[540px]:text-[11px]"
             onClick={() => window.location.reload()}
           >
             <RefreshCw size={15} />
             Reload data
-          </button>
+          </Button>
         </div>
         {error ? (
-          <div className="load-state error-state" role="alert">
+          <div
+            className="flex min-h-87.5 flex-col items-center justify-center gap-3.25 text-muted [&_h2]:text-text"
+            role="alert"
+          >
             <h2>Could not load request history</h2>
             <p>{error}</p>
-            <button
-              className="button primary"
-              onClick={() => window.location.reload()}
-            >
+            <Button variant="primary" onClick={() => window.location.reload()}>
               Retry
-            </button>
+            </Button>
           </div>
         ) : !snapshot ? (
-          <div className="load-state" role="status">
-            <span className="loading-spinner" />
+          <div
+            className="flex min-h-87.5 flex-col items-center justify-center gap-3.25 text-muted"
+            role="status"
+          >
+            <span className="size-6.25 animate-[spin_0.7s_linear_infinite] rounded-full border-2 border-border border-t-teal motion-reduce:animate-none" />
             <p>Loading request history…</p>
           </div>
         ) : (
           <>
-            <div className="snapshot-info">
+            <div className="mb-6.75 flex justify-between gap-2.5 text-[11px] text-muted max-[800px]:flex-col max-[800px]:gap-1.25">
               <span>
                 {snapshot.requests.length.toLocaleString('en-US')} requests
                 loaded · {dateTime(snapshot.loadedAt)}
@@ -99,14 +115,14 @@ export default function App() {
                 Time zone: {Intl.DateTimeFormat().resolvedOptions().timeZone}
               </span>
             </div>
-            <section id="overview" className="overview-section">
-              <div className="section-heading">
+            <section id="overview">
+              <div className="mb-3.75 flex items-center justify-between gap-3.75 max-[540px]:flex-col max-[540px]:items-start max-[540px]:gap-2.5 [&_p]:mt-0.75 [&_p]:text-[12px] [&_p]:text-muted">
                 <div>
                   <h2>Activity overview</h2>
                   <p>Totals and charts reflect the entire selection.</p>
                 </div>
                 <button
-                  className={`link-toggle ${state.linked ? 'is-linked' : ''}`}
+                  className="flex items-center gap-1.75 rounded-[7px] border border-border bg-white px-2.5 py-1.75 text-[11px] text-muted aria-pressed:border-[#c7e1d9] aria-pressed:bg-teal-light aria-pressed:text-teal"
                   aria-pressed={state.linked}
                   onClick={() =>
                     dispatch({ type: 'link', linked: !state.linked })
@@ -125,13 +141,13 @@ export default function App() {
                 total={snapshot.requests.length}
               />
               {!state.linked && (
-                <p className="independent-note">
+                <p className="my-2.5 text-[11px] text-muted">
                   The dashboard uses its own filters. Linking it again applies
                   the table filters.
                 </p>
               )}
               <SummaryCards requests={dashboardRequests} />
-              <div className="charts-grid">
+              <div className="grid grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)] gap-4.25 max-[1150px]:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] max-[800px]:grid-cols-1">
                 <TimelineChart
                   requests={dashboardRequests}
                   filters={state.dashboardFilters}
@@ -139,8 +155,8 @@ export default function App() {
                 <ComparisonChart requests={dashboardRequests} />
               </div>
             </section>
-            <section id="requests" className="requests-section">
-              <div className="section-heading">
+            <section id="requests" className="mt-8 [&>section]:mb-3.75">
+              <div className="mb-3.75 flex items-center justify-between gap-3.75 max-[540px]:flex-col max-[540px]:items-start max-[540px]:gap-2.5 [&_p]:mt-0.75 [&_p]:text-[12px] [&_p]:text-muted">
                 <div>
                   <h2>Requests</h2>
                   <p>
@@ -149,7 +165,7 @@ export default function App() {
                       : 'This selection is independent of the dashboard.'}
                   </p>
                 </div>
-                <span className="selection-note">
+                <span className="flex items-center gap-1.5 text-[11px] text-muted">
                   {state.linked ? <Link2 size={14} /> : <Unlink2 size={14} />}
                   {state.linked ? 'Shared filters' : 'Separate filters'}
                 </span>
@@ -166,9 +182,9 @@ export default function App() {
               )}
               <RequestsTable requests={tableRequests} />
             </section>
-            <footer className="page-footer">
+            <footer className="flex justify-between gap-3.75 pt-6.25 text-[10px] text-[#8a96a3] max-[800px]:flex-col max-[800px]:gap-1.25">
               <span>
-                OpenWhispr Proxy <span className="footer-dot">·</span> Data from
+                OpenWhispr Proxy <span className="mx-1.75">·</span> Data from
                 your local SQLite database
               </span>
               <span>

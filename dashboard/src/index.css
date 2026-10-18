@@ -1,119 +1,83 @@
-@import './styles/tokens.css';
-* {
-  box-sizing: border-box;
+@import 'tailwindcss';
+
+@theme {
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'SFMono-Regular', Consolas, monospace;
+  --color-page: #f6f8fa;
+  --color-text: #202e3b;
+  --color-muted: #73808e;
+  --color-border: #e4e9ed;
+  --color-teal: #137d70;
+  --color-teal-light: #eaf5f1;
+  --color-rose: #bd4b5a;
+  --shadow-card: 0 2px 4px #1c344405;
 }
-html {
-  scroll-behavior: smooth;
-  scroll-padding-top: 85px;
-}
-body {
-  margin: 0;
-  min-width: 360px;
-  background: var(--page);
-  color: var(--text);
-  font: 14px/1.5 var(--font);
-  -webkit-font-smoothing: antialiased;
-}
-button,
-input,
-select {
-  font: inherit;
-}
-button,
-summary,
-select {
-  cursor: pointer;
-}
-button {
-  color: inherit;
-}
-button:disabled {
-  cursor: default;
-  opacity: 0.35;
-}
-a {
-  color: inherit;
-  text-decoration: none;
-}
-:focus-visible {
-  outline: 2px solid var(--teal);
-  outline-offset: 3px;
-}
-input,
-select {
-  border: 1px solid var(--border);
-  border-radius: 7px;
-  background: white;
-  color: var(--text);
-  min-height: 35px;
-  padding: 6px 9px;
-  max-width: 100%;
-}
-input {
-  min-width: 0;
-}
-input::placeholder {
-  color: #939caa;
-}
-input[type='checkbox'] {
-  min-height: auto;
-  accent-color: var(--teal);
-}
-h1,
-h2,
-h3,
-p {
-  margin: 0;
-}
-h2 {
-  font-size: 18px;
-  font-weight: 650;
-  letter-spacing: -0.4px;
-}
-h3 {
-  font-size: 15px;
-  font-weight: 650;
-  letter-spacing: -0.2px;
-}
-fieldset {
-  margin: 0;
-  padding: 0;
-  border: 0;
-  min-width: 0;
-}
-legend {
-  font-size: 12px;
-  font-weight: 550;
-  margin-bottom: 8px;
-  padding: 0;
-}
-code,
-pre {
-  font-family: 'SFMono-Regular', Consolas, monospace;
-  font-size: 12px;
-}
-::selection {
-  background: #c3e6dd;
-}
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-@media (prefers-reduced-motion: reduce) {
+
+/* Document defaults and native controls. View-specific styles live in JSX. */
+@layer base {
   html {
-    scroll-behavior: auto;
+    @apply scroll-smooth scroll-pt-21.25 motion-reduce:scroll-auto;
   }
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
+
+  body {
+    @apply m-0 min-w-90 bg-page font-sans text-[14px] leading-normal text-text antialiased;
+  }
+
+  button,
+  input,
+  select {
+    font: inherit;
+  }
+
+  button,
+  summary,
+  select {
+    @apply cursor-pointer;
+  }
+
+  button:disabled {
+    @apply cursor-default opacity-35;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-[3px] outline-teal;
+  }
+
+  input,
+  select {
+    @apply min-h-8.75 max-w-full rounded-[7px] border border-border bg-white px-2.25 py-1.5 text-text;
+  }
+
+  input {
+    @apply min-w-0 placeholder:text-[#939caa];
+  }
+
+  input[type='checkbox'] {
+    @apply min-h-0 accent-teal;
+  }
+
+  h2 {
+    @apply text-[18px] font-[650] tracking-[-0.4px];
+  }
+
+  h3 {
+    @apply text-[15px] font-[650] tracking-[-0.2px];
+  }
+
+  fieldset {
+    @apply m-0 min-w-0 border-0 p-0;
+  }
+
+  legend {
+    @apply mb-2 p-0 text-[12px] font-[550];
+  }
+
+  code,
+  pre {
+    @apply font-mono text-[12px];
+  }
+
+  ::selection {
+    @apply bg-[#c3e6dd];
   }
 }

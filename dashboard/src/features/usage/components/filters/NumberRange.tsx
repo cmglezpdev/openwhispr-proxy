@@ -8,9 +8,9 @@ interface Props {
 
 export function NumberRange({ label, value, onChange }: Props) {
   return (
-    <fieldset className="number-range">
+    <fieldset className="[&+fieldset]:mt-3.75">
       <legend>{label}</legend>
-      <div className="range-inputs">
+      <div className="flex items-center gap-1.25 [&_input]:w-20 [&_input]:flex-1 max-[540px]:[&_input]:w-17.5 [&_select]:w-23.75 [&_select]:text-[11px] [&_span]:text-[11px] [&_span]:text-muted">
         <select
           aria-label={`${label}: condition`}
           value={value.operator}

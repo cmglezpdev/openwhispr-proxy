@@ -151,13 +151,15 @@ export function TimelineChart({
     0,
   );
   return (
-    <article className="chart-card timeline-card">
-      <div className="chart-heading">
+    <article className="min-w-0 rounded-[11px] border border-border bg-white px-4.5 pt-4.75 pb-3 shadow-card max-[540px]:px-2.5 max-[540px]:pt-3.75 max-[540px]:pb-2.5">
+      <div className="flex items-center justify-between gap-3 max-[1150px]:flex-wrap [&_h3]:mt-1.25 [&_h3]:text-[14px]">
         <div>
-          <span className="eyebrow">TREND</span>
+          <span className="flex items-center gap-1.75 text-[10px] font-[650] tracking-[1.5px] text-muted">
+            TREND
+          </span>
           <h3>Activity over time</h3>
         </div>
-        <div className="chart-controls">
+        <div className="flex gap-1.75 max-[1150px]:flex-wrap [&_select]:min-h-7.5 [&_select]:px-1.5 [&_select]:py-1 [&_select]:text-[11px] max-[540px]:[&_select]:text-[10px]">
           <label className="sr-only" htmlFor="timeline-metric">
             Timeline metric
           </label>
@@ -190,18 +192,18 @@ export function TimelineChart({
           </select>
         </div>
       </div>
-      <div className="chart-subheading">
+      <div className="mt-1.25 flex min-h-8.5 items-center justify-between text-[10px] max-[540px]:gap-2">
         {metric === 'requests' ? (
-          <span className="muted">Total requests in each period.</span>
+          <span className="text-muted">Total requests in each period.</span>
         ) : (
-          <span className="muted">
+          <span className="text-muted">
             {metric === 'cost'
               ? 'Recorded costs only. Amounts in USD.'
               : 'Only transcriptions with a recorded duration.'}
           </span>
         )}
         {metric === 'cost' && (
-          <label className="inline-checkbox">
+          <label className="flex items-center gap-1 text-[10px] text-muted">
             <input
               type="checkbox"
               checked={cumulative}
@@ -218,7 +220,7 @@ export function TimelineChart({
           ariaLabel={`${metricNames[metric]} by ${periodNames[granularity].toLowerCase()}`}
         />
       ) : (
-        <div className="chart-empty">
+        <div className="flex h-68.75 flex-col items-center justify-center gap-2.5 text-center text-[12px] text-muted">
           <BarChart3 size={28} />
           <p>
             {requests.length
@@ -227,7 +229,7 @@ export function TimelineChart({
           </p>
         </div>
       )}
-      <div className="chart-footnote">
+      <div className="mt-1.25 border-t border-[#f0f3f5] pt-2.25 text-[10px] text-muted">
         {granularity === 'week' ? 'Weeks run from Monday to Sunday. ' : ''}
         {missing > 0
           ? `${missing} ${metric === 'cost' ? 'requests without cost' : 'audio requests without duration'}. Periods without known values have no bar.`

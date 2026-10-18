@@ -67,14 +67,16 @@ export function ComparisonChart({ requests }: { requests: UsageRequest[] }) {
     [data, metric],
   );
   return (
-    <article className="chart-card comparison-card">
-      <div className="chart-heading">
+    <article className="min-w-0 rounded-[11px] border border-border bg-white px-4.5 pt-4.75 pb-3 shadow-card max-[540px]:px-2.5 max-[540px]:pt-3.75 max-[540px]:pb-2.5">
+      <div className="flex items-center justify-between gap-3 max-[1150px]:flex-wrap [&_h3]:mt-1.25 [&_h3]:text-[14px]">
         <div>
-          <span className="eyebrow">DISTRIBUTION</span>
+          <span className="flex items-center gap-1.75 text-[10px] font-[650] tracking-[1.5px] text-muted">
+            DISTRIBUTION
+          </span>
           <h3>{by === 'model' ? 'Usage by model' : 'Usage by operation'}</h3>
         </div>
       </div>
-      <div className="chart-controls comparison-controls">
+      <div className="flex gap-1.75 max-[1150px]:flex-wrap [&_select]:min-h-7.5 [&_select]:px-1.5 [&_select]:py-1 [&_select]:text-[11px] max-[540px]:[&_select]:text-[10px] mt-3.5">
         <label className="sr-only" htmlFor="comparison-by">
           Compare by
         </label>
@@ -100,7 +102,7 @@ export function ComparisonChart({ requests }: { requests: UsageRequest[] }) {
         </select>
       </div>
       {data.length ? (
-        <div className="comparison-scroll">
+        <div className="max-h-67.75 overflow-y-auto max-[800px]:max-h-75">
           <Chart
             definition={chart}
             height={Math.max(215, data.length * 42 + 45)}
@@ -108,11 +110,11 @@ export function ComparisonChart({ requests }: { requests: UsageRequest[] }) {
           />
         </div>
       ) : (
-        <div className="chart-empty">
+        <div className="flex h-68.75 flex-col items-center justify-center gap-2.5 text-center text-[12px] text-muted">
           <p>No values available to compare.</p>
         </div>
       )}
-      <div className="chart-footnote">
+      <div className="mt-1.25 border-t border-[#f0f3f5] pt-2.25 text-[10px] text-muted">
         {groups.some((row) => row.value === null)
           ? 'Groups without known values are not shown.'
           : 'Comparison of the entire filtered selection.'}

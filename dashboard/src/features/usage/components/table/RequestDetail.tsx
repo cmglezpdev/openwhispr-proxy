@@ -1,3 +1,4 @@
+import { Button, IconButton } from '../../../../shared/ui/Button';
 import { useEffect, useRef, useState } from 'react';
 import { Copy, X } from 'lucide-react';
 import type { UsageRequest } from '../../domain/types';
@@ -46,27 +47,25 @@ export function RequestDetail({
   return (
     <dialog
       ref={dialog}
-      className="request-dialog"
+      className="m-auto max-h-[88vh] w-[min(760px,calc(100%-30px))] rounded-[14px] border border-border p-0 text-text shadow-[0_20px_90px_#152a3c40] backdrop:bg-[#182f4260] backdrop:backdrop-blur-[3px]"
       onCancel={onClose}
       onClick={(event) => {
         if (event.target === event.currentTarget) onClose();
       }}
       aria-labelledby="request-detail-title"
     >
-      <div className="dialog-header">
+      <div className="flex items-center justify-between gap-3.75 border-b border-border px-6.25 py-5.5 max-[540px]:p-4.5 [&_h2]:mt-1.25 [&_h2]:text-[19px] [&_h2]:wrap-anywhere">
         <div>
-          <span className="eyebrow">REQUEST DETAILS</span>
+          <span className="flex items-center gap-1.75 text-[10px] font-[650] tracking-[1.5px] text-muted">
+            REQUEST DETAILS
+          </span>
           <h2 id="request-detail-title">{request.model ?? 'Unknown model'}</h2>
         </div>
-        <button
-          className="icon-button"
-          aria-label="Close details"
-          onClick={onClose}
-        >
+        <IconButton aria-label="Close details" onClick={onClose}>
           <X size={20} />
-        </button>
+        </IconButton>
       </div>
-      <dl className="detail-fields">
+      <dl className="m-0 grid grid-cols-2 gap-4 px-6.25 py-5 max-[540px]:grid-cols-1 [&_dt]:mb-1 [&_dt]:text-[11px] [&_dt]:text-muted [&_dd]:m-0 [&_dd]:text-[12px] [&_dd]:wrap-anywhere">
         {fields.map(([name, value]) => (
           <div key={name}>
             <dt>{name}</dt>
@@ -75,19 +74,19 @@ export function RequestDetail({
         ))}
       </dl>
       {request.text !== null && (
-        <section className="detail-text">
+        <section className="mb-2.5 text-[12px] [&_h3]:mb-2.5 [&_h3]:text-[12px] [&_pre]:m-0 [&_pre]:leading-[1.8] [&_pre]:whitespace-pre-wrap [&_pre]:wrap-anywhere">
           <h3>Result text</h3>
           <pre>{request.text}</pre>
         </section>
       )}
-      <div className="dialog-footer">
-        <button className="button" onClick={() => void copy()}>
+      <div className="sticky bottom-0 flex justify-between border-t border-border bg-white px-6.25 py-3.5">
+        <Button onClick={() => void copy()}>
           <Copy size={15} />
           {copied}
-        </button>
-        <button className="button primary" onClick={onClose}>
+        </Button>
+        <Button variant="primary" onClick={onClose}>
           Close
-        </button>
+        </Button>
       </div>
     </dialog>
   );

@@ -1,4 +1,5 @@
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 import { fileURLToPath } from 'node:url';
 import { defineConfig, loadEnv } from 'vite';
 
@@ -10,6 +11,7 @@ export default defineConfig(({ mode }) => {
     base: '/dashboard/',
     plugins: [
       react(),
+      tailwindcss(),
       {
         name: 'dashboard-trailing-slash',
         configureServer(server) {

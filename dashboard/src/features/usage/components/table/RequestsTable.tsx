@@ -1,3 +1,4 @@
+import { IconButton } from '../../../../shared/ui/Button';
 import { useMemo, useState } from 'react';
 import {
   ArrowDown,
@@ -44,14 +45,18 @@ export function RequestsTable({ requests }: { requests: UsageRequest[] }) {
           header: 'Date',
           sortFn: 'text',
           cell: (info) => (
-            <span className="date-cell">{dateTime(info.getValue())}</span>
+            <span className="text-[10px] text-[#758291] tabular-nums">
+              {dateTime(info.getValue())}
+            </span>
           ),
         }),
         helper.accessor('kind', {
           header: 'Operation',
           enableSorting: false,
           cell: (info) => (
-            <span className={`type-badge ${info.getValue()}`}>
+            <span
+              className={`inline-block rounded-[5px] px-1.75 py-0.75 text-[10px] ${info.getValue() === 'enhancement' ? 'bg-[#f1effa] text-[#8570b1]' : 'bg-[#edf4fb] text-[#5c7eab]'}`}
+            >
               {info.getValue() === 'transcription'
                 ? 'Transcription'
                 : 'Text enhancement'}
@@ -64,7 +69,9 @@ export function RequestsTable({ requests }: { requests: UsageRequest[] }) {
           sortFn: 'text',
           sortUndefined: 'last',
           cell: (info) => (
-            <span className="model-cell">{info.getValue() ?? 'Unknown'}</span>
+            <span className="font-mono text-[10px]">
+              {info.getValue() ?? 'Unknown'}
+            </span>
           ),
         }),
         helper.accessor((row) => row.costUsd ?? undefined, {
@@ -73,7 +80,9 @@ export function RequestsTable({ requests }: { requests: UsageRequest[] }) {
           sortFn: 'basic',
           sortUndefined: 'last',
           cell: (info) => (
-            <span className="numeric">{money(info.getValue() ?? null)}</span>
+            <span className="tabular-nums">
+              {money(info.getValue() ?? null)}
+            </span>
           ),
         }),
         helper.accessor((row) => row.durationSeconds ?? undefined, {
@@ -82,7 +91,7 @@ export function RequestsTable({ requests }: { requests: UsageRequest[] }) {
           sortFn: 'basic',
           sortUndefined: 'last',
           cell: (info) => (
-            <span className="numeric muted">
+            <span className="tabular-nums text-muted">
               {info.row.original.kind === 'enhancement'
                 ? 'Not applicable'
                 : duration(info.getValue() ?? null)}
@@ -95,14 +104,16 @@ export function RequestsTable({ requests }: { requests: UsageRequest[] }) {
           sortFn: 'basic',
           sortUndefined: 'last',
           cell: (info) => (
-            <span className="numeric">{latency(info.getValue() ?? null)}</span>
+            <span className="tabular-nums">
+              {latency(info.getValue() ?? null)}
+            </span>
           ),
         }),
         helper.accessor('text', {
           header: 'Result text',
           enableSorting: false,
           cell: (info) => (
-            <span className="text-preview">
+            <span className="block max-w-62.5 overflow-hidden text-ellipsis">
               {info.getValue() ?? 'No result'}
             </span>
           ),
@@ -122,13 +133,12 @@ export function RequestsTable({ requests }: { requests: UsageRequest[] }) {
           header: '',
           enableHiding: false,
           cell: (info) => (
-            <button
-              className="icon-button"
+            <IconButton
               aria-label={`View details ${info.row.original.key}`}
               onClick={() => setSelected(info.row.original)}
             >
               <ExternalLink size={15} />
-            </button>
+            </IconButton>
           ),
         }),
       ]),
@@ -154,20 +164,23 @@ export function RequestsTable({ requests }: { requests: UsageRequest[] }) {
   const visibleColumns = table.getVisibleLeafColumns().length;
   const { pageIndex, pageSize } = table.state.pagination;
   return (
-    <div className="table-card">
-      <div className="table-toolbar">
+    <div className="rounded-[11px] border border-border bg-white shadow-card">
+      <div className="flex items-center justify-between gap-3.75 px-4.5 py-4.25 [&_h3]:flex [&_h3]:items-center [&_h3]:gap-2.25 [&_h3]:text-[13px] [&_p]:mt-1 [&_p]:text-[10px] [&_p]:text-muted">
         <div>
           <h3>
-            Request log <span className="count-pill">{requests.length}</span>
+            Request log{' '}
+            <span className="rounded-[5px] bg-[#f0f3f6] px-1.5 py-px text-[10px] text-muted">
+              {requests.length}
+            </span>
           </h3>
           <p>Sort by column. Hold Shift to sort by multiple columns.</p>
         </div>
-        <details className="column-menu">
-          <summary className="button">
+        <details className="relative [&_summary]:list-none [&_summary]:text-[11px] [&_summary]:font-normal [&_summary::-webkit-details-marker]:hidden">
+          <summary className="inline-flex items-center justify-center gap-1.75 rounded-[7px] border border-border bg-white px-3 py-2 text-[11px] font-normal whitespace-nowrap shadow-card hover:border-[#c9d7d3] hover:bg-[#f8fafb]">
             <Columns3 size={15} />
             Columns
           </summary>
-          <div className="column-options">
+          <div className="absolute top-9.75 right-0 z-4 max-h-82.5 w-58.75 overflow-auto rounded-[9px] border border-border bg-white p-3 shadow-[0_8px_25px_#182b3b15] [&_label]:flex [&_label]:items-center [&_label]:gap-2 [&_label]:py-1 [&_label]:text-[11px]">
             {table
               .getAllLeafColumns()
               .filter((column) => column.getCanHide())
@@ -184,13 +197,14 @@ export function RequestsTable({ requests }: { requests: UsageRequest[] }) {
           </div>
         </details>
       </div>
-      <div className="table-scroll">
-        <table>
-          <thead>
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse text-left whitespace-nowrap">
+          <thead className="border-y border-border bg-[#f8fafb]">
             {table.getHeaderGroups().map((group) => (
               <tr key={group.id}>
                 {group.headers.map((header) => (
                   <th
+                    className="px-3.25 py-2.5 text-[10px] font-medium text-[#728090] aria-[sort]:text-teal"
                     key={header.id}
                     scope="col"
                     aria-sort={
@@ -202,7 +216,10 @@ export function RequestsTable({ requests }: { requests: UsageRequest[] }) {
                     }
                   >
                     {header.column.getCanSort() ? (
-                      <button onClick={header.column.getToggleSortingHandler()}>
+                      <button
+                        className="flex items-center gap-1.5 border-0 bg-transparent p-0 text-inherit"
+                        onClick={header.column.getToggleSortingHandler()}
+                      >
                         {flexRender(
                           header.column.columnDef.header,
                           header.getContext(),
@@ -212,7 +229,7 @@ export function RequestsTable({ requests }: { requests: UsageRequest[] }) {
                         ) : header.column.getIsSorted() === 'desc' ? (
                           <ArrowDown size={13} />
                         ) : (
-                          <ArrowUpDown size={12} className="sort-idle" />
+                          <ArrowUpDown size={12} className="opacity-45" />
                         )}
                       </button>
                     ) : (
@@ -226,11 +243,14 @@ export function RequestsTable({ requests }: { requests: UsageRequest[] }) {
               </tr>
             ))}
           </thead>
-          <tbody>
+          <tbody className="[&_tr:hover]:bg-[#fbfcfd] [&_tr:last-child_td]:border-b-0">
             {table.getRowModel().rows.map((row) => (
               <tr key={row.id}>
                 {row.getVisibleCells().map((cell) => (
-                  <td key={cell.id}>
+                  <td
+                    className="border-b border-[#f0f3f5] px-3.25 py-3 text-[11px]"
+                    key={cell.id}
+                  >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </td>
                 ))}
@@ -238,8 +258,11 @@ export function RequestsTable({ requests }: { requests: UsageRequest[] }) {
             ))}
             {!requests.length && (
               <tr>
-                <td colSpan={visibleColumns}>
-                  <div className="table-empty">
+                <td
+                  className="border-b border-[#f0f3f5] px-3.25 py-3 text-[11px]"
+                  colSpan={visibleColumns}
+                >
+                  <div className="px-3.75 py-8.75 text-center whitespace-normal [&_h3]:mb-1.25 [&_h3]:text-[14px] [&_p]:text-[12px] [&_p]:text-muted">
                     <SearchEmpty />
                     <h3>No matching requests</h3>
                     <p>Try another date range or clear the filters.</p>
@@ -250,7 +273,7 @@ export function RequestsTable({ requests }: { requests: UsageRequest[] }) {
           </tbody>
         </table>
       </div>
-      <div className="table-pagination">
+      <div className="flex items-center justify-between gap-3.75 border-t border-border px-4.25 py-3 text-[10px] text-muted max-[540px]:flex-col max-[540px]:items-stretch [&>div]:flex [&>div]:items-center [&>div]:gap-2.5 max-[540px]:[&>div]:justify-between max-[540px]:[&>div]:gap-1 [&_label]:flex [&_label]:items-center [&_label]:gap-1.75 max-[540px]:[&_label]:gap-1 max-[540px]:[&_label]:text-[9px] [&_select]:min-h-7 [&_select]:px-1.25 [&_select]:py-0.75 [&_select]:text-[10px]">
         <span>
           {requests.length
             ? `${pageIndex * pageSize + 1}–${Math.min((pageIndex + 1) * pageSize, requests.length)} of ${requests.length}`
@@ -276,22 +299,20 @@ export function RequestsTable({ requests }: { requests: UsageRequest[] }) {
           <span>
             Page {requests.length ? pageIndex + 1 : 0} of {table.getPageCount()}
           </span>
-          <button
-            className="icon-button"
+          <IconButton
             aria-label="Previous page"
             disabled={!table.getCanPreviousPage()}
             onClick={() => table.previousPage()}
           >
             <ChevronLeft size={17} />
-          </button>
-          <button
-            className="icon-button"
+          </IconButton>
+          <IconButton
             aria-label="Next page"
             disabled={!table.getCanNextPage()}
             onClick={() => table.nextPage()}
           >
             <ChevronRight size={17} />
-          </button>
+          </IconButton>
         </div>
       </div>
       {selected && (
@@ -303,7 +324,7 @@ export function RequestsTable({ requests }: { requests: UsageRequest[] }) {
 
 function SearchEmpty() {
   return (
-    <span className="empty-glyph">
+    <span className="mb-3.5 inline-flex rounded-full bg-[#f1f5f7] p-3.75 text-[#91a0ac]">
       <ArrowUpDown size={25} />
     </span>
   );

@@ -1,6 +1,6 @@
 # Local usage dashboard
 
-React and TypeScript application generated with `pnpm create vite dashboard --template react-ts --no-interactive`. It uses TanStack Table 9, TanStack Charts and Lucide icons. Nest serves the production build under `/dashboard` in the proxy's existing Docker image.
+React and TypeScript application generated with `pnpm create vite dashboard --template react-ts --no-interactive`. It uses Tailwind CSS 4 through the Vite plugin, TanStack Table 9, TanStack Charts and Lucide icons. Nest serves the production build under `/dashboard` in the proxy's existing Docker image.
 
 ## Development
 
@@ -20,10 +20,16 @@ pnpm lint:dashboard
 - `src/features/usage/application` manages linked or independent selections and loading state. The HTTP loader is passed in by the application composition root.
 - `src/features/usage/infrastructure` implements the one-time history fetch.
 - `src/features/usage/components` contains filters, summaries, charts, the table and request details in separate folders.
-- `src/shared` contains display formatting. `src/styles` contains shared visual tokens and page layout.
+- `src/shared` contains display formatting and reusable `Button`, `IconButton` and `FormField` components. `src/index.css` imports Tailwind, defines theme tokens and sets document and native-control defaults. Layout, responsive rules and visual states use Tailwind utilities in the components.
 - `src/App.tsx` composes the data adapter, selection state and views.
 
 The frontend imports the framework-independent usage contract from `../src/usage/domain/usage-request.ts` using type-only imports. Backend implementation code is not bundled into the browser.
+
+## Styling
+
+Use utility classes in JSX for component styles. Theme colors such as `text-muted`, `bg-teal-light` and `border-border` come from `@theme` in `src/index.css`. Keep conditional classes as complete strings so Tailwind can detect them. Use `Button` for default, primary and text actions, `IconButton` for actions with only an icon, and `FormField` for labeled filter controls.
+
+The responsive layout retains the existing 1150px, 800px and 540px thresholds using `max-[…px]` variants. Charts still use TanStack chart configuration for marks, axes and series colors.
 
 ## Data rules
 
