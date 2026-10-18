@@ -1,4 +1,4 @@
-FROM node:26-alpine AS builder
+FROM node:24-alpine AS builder
 WORKDIR /app
 
 RUN npm install -g pnpm@11.23.0
@@ -11,7 +11,7 @@ COPY . .
 RUN pnpm build
 
 # Prod Deps
-FROM node:26-alpine AS prod-deps
+FROM node:24-alpine AS prod-deps
 WORKDIR /app
 
 RUN npm install -g pnpm@11.23.0
@@ -21,7 +21,7 @@ COPY dashboard/package.json ./dashboard/package.json
 RUN pnpm install --frozen-lockfile --prod --filter openwhispr-proxy
 
 # Runner
-FROM node:26-alpine AS runner
+FROM node:24-alpine AS runner
 WORKDIR /app
 
 LABEL dev.orbstack.icon="https://raw.githubusercontent.com/cmglezpdev/openwhispr-proxy/main/assets/orbstack-icon.png"
