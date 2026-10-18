@@ -47,6 +47,9 @@ jobs:
     needs: application
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
     permissions:
       contents: write
       issues: write
@@ -69,3 +72,15 @@ jobs:
           pr_number=$(jq -er '.number' <<< "$RELEASE_PR")
           branch=$(gh api "repos/$GH_REPO/pulls/$pr_number" --jq '.head.ref')
           gh workflow run release-please.yml --ref "$branch"
+
+  docker:
+    name: Docker image
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/docker-publish.yml
+    with:
+      tag: ${{ needs.release-please.outputs.tag_name }}
+      publish_latest: true
