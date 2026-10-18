@@ -10,9 +10,81 @@ Built with TypeScript, NestJS and React. The backend serves the API and dashboar
 
 ## Getting started
 
-### Docker Compose
+### Docker run with the published image
 
-Clone the repository, then build and start the application:
+Run the published image directly with Docker. No repository clone or Compose
+file is needed:
+
+```bash
+docker run -d \
+  --name openwhispr-proxy \
+  --restart unless-stopped \
+  -p 127.0.0.1:8080:8080 \
+  -e PORT=8080 \
+  -e USAGE_DB_PATH=/app/data/usage.db \
+  -v openwhispr-proxy-data:/app/data \
+  --label dev.orbstack.icon=https://raw.githubusercontent.com/cmglezpdev/openwhispr-proxy/main/assets/orbstack-icon.png \
+  ghcr.io/cmglezpdev/openwhispr-proxy:latest
+```
+
+Docker downloads the image if it is missing and creates the named volume
+`openwhispr-proxy-data` to preserve usage data when the container is replaced.
+Open [the dashboard](http://localhost:8080/dashboard), then
+[connect OpenWhispr](#connect-openwhispr). The port is accessible only on the Docker
+host. No server-side API key is needed.
+
+To use another host port, change the mapping to, for example,
+`-p 127.0.0.1:9090:8080`. To pin a version, replace `:latest` with a published
+version tag such as `:0.2.0`.
+
+Stop and start the container with `docker stop openwhispr-proxy` and
+`docker start openwhispr-proxy`. To update, pull the image, remove the container,
+then repeat the `docker run` command above with the same volume name:
+
+```bash
+docker pull ghcr.io/cmglezpdev/openwhispr-proxy:latest
+docker stop openwhispr-proxy
+docker rm openwhispr-proxy
+```
+
+The named volume remains after `docker rm`. It is separate from the `./data`
+bind mount used by the Compose examples below.
+
+### Docker Compose with the published image
+
+Requires Docker Compose. Download the Compose file and start the published
+image from GitHub Container Registry. No repository clone or local build is needed:
+
+```bash
+mkdir openwhispr-proxy
+cd openwhispr-proxy
+curl -fsSLO https://raw.githubusercontent.com/cmglezpdev/openwhispr-proxy/main/docker-compose.ghcr.yml
+docker compose -f docker-compose.ghcr.yml up -d
+```
+
+The image supports `linux/amd64` and `linux/arm64`, including Apple Silicon.
+`latest` tracks the newest published stable release. To select a specific version,
+set `IMAGE_TAG` in a `.env` file next to the Compose file, for example
+`IMAGE_TAG=0.2.0`. Image version tags omit the leading `v` from Git release tags.
+
+The proxy is available at `http://localhost:8080`. Compose publishes the port on `127.0.0.1`, so access is limited to the Docker host. Open [the dashboard](http://localhost:8080/dashboard) to view usage, then [connect OpenWhispr](#connect-openwhispr) to start recording activity.
+
+Usage data is stored in `./data/usage.db` on the host. The Compose bind mount preserves it when the container is recreated. To stop the application:
+
+```bash
+docker compose -f docker-compose.ghcr.yml down
+```
+
+To update to the current image for your selected tag:
+
+```bash
+docker compose -f docker-compose.ghcr.yml pull
+docker compose -f docker-compose.ghcr.yml up -d
+```
+
+### Docker Compose with a local build
+
+To build from source, clone the repository and use the original Compose file:
 
 ```bash
 git clone https://github.com/cmglezpdev/openwhispr-proxy.git
@@ -21,13 +93,8 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-The proxy is available at `http://localhost:8080`. Compose publishes the port on `127.0.0.1`, so access is limited to the Docker host. Open [the dashboard](http://localhost:8080/dashboard) to view usage, then [connect OpenWhispr](#connect-openwhispr) to start recording activity.
-
-Usage data is stored in `./data/usage.db` on the host. The Compose bind mount preserves it when the container is recreated. To stop the application:
-
-```bash
-docker compose down
-```
+Both Compose files use the same port settings and persistent `./data` directory.
+Use one at a time. Stop the local build with `docker compose down`.
 
 ### Without Docker
 
@@ -160,8 +227,27 @@ dispatches CI on generated release branches because PRs created with
 
 In GitHub branch protection or a ruleset for `main`, require
 `Application / Node 24` before merging. Workflow files alone do
-not enforce merge restrictions. Releases contain the source tag and changelog;
-the Docker image is built locally with Compose.
+not enforce merge restrictions.
+
+After Release Please creates a stable release, CI calls `Publish Docker image`
+directly to build the release tag and push a multi-platform image to
+`ghcr.io/cmglezpdev/openwhispr-proxy`. For `v0.2.0`, the image tags are `0.2.0`
+and `latest`. Publication uses `GITHUB_TOKEN` with `packages: write`; no registry
+secret is needed. The direct workflow call is necessary because releases created
+with `GITHUB_TOKEN` do not trigger another workflow through a release event.
+
+After the first image is published, open the package's settings on GitHub and
+change its visibility to **Public** so users can pull without signing in.
+GHCR packages are private by default, even for a public repository. See
+[GitHub's container registry documentation](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry).
+The published-image quick start requires that first successful publication and
+visibility change.
+
+To publish an existing release for the first time or retry a failed publication,
+run `Publish Docker image` from the GitHub Actions tab on `main`, supplying an
+existing stable tag such as `v0.2.0`. Enable `publish_latest` only when publishing
+the newest release. Manual runs leave `latest` unchanged by default, so rebuilding
+an older version does not move users back to it.
 
 ## Local-use limits
 
