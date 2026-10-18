@@ -47,15 +47,8 @@ export class ChatController {
       throw new BadRequestException('Messages are required');
     }
 
-    const promptSummary = messages
-      .map((message) => {
-        const preview = message.content?.slice(0, 100) ?? '';
-        return `${message.role}: ${preview}`;
-      })
-      .join(' | ');
-
     this.logger.log(
-      `Incoming chat completion request: model=${model}, messages=${messages.length} [${promptSummary}]`,
+      `Incoming chat completion request: model=${model}, messages=${messages.length}`,
     );
 
     return this.chatService.generateCompletion(model, messages, apiKey, {

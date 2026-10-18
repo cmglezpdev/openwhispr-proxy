@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { createGateway } from '@ai-sdk/gateway';
 import { transcribe } from 'ai';
 import { UsageRepository } from 'src/usage/usage.repository';
 import { getAudioDurationSeconds } from './audio-duration';
@@ -8,11 +9,11 @@ export class AudioService {
   constructor(private readonly transcriptionsRepo: UsageRepository) {}
 
   async transcribe(file: Express.Multer.File, model: string, apiKey: string) {
-    process.env.AI_GATEWAY_API_KEY = apiKey;
+    const gateway = createGateway({ apiKey });
     const startedAt = performance.now();
 
     const result = await transcribe({
-      model,
+      model: gateway.transcriptionModel(model),
       audio: file.buffer,
     });
     const latencyMs = Math.round(performance.now() - startedAt);

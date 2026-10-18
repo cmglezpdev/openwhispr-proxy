@@ -87,15 +87,25 @@ describe('AudioService', () => {
     await service.transcribe(file, 'openai/whisper-1', 'secret-key');
 
     expect(transcribe).toHaveBeenCalledWith({
-      model: 'openai/whisper-1',
+      model: { modelId: 'openai/whisper-1', apiKey: 'secret-key' },
       audio: file.buffer,
     });
   });
 
-  it('exposes the caller api key to the gateway sdk', async () => {
-    await service.transcribe(buildFile(), 'openai/whisper-1', 'secret-key');
+  it('isolates concurrent callers without changing the process api key', async () => {
+    const previous = process.env.AI_GATEWAY_API_KEY;
+    await Promise.all(
+      ['key-a', 'key-b'].map((key) =>
+        service.transcribe(buildFile(), 'openai/whisper-1', key),
+      ),
+    );
 
-    expect(process.env.AI_GATEWAY_API_KEY).toBe('secret-key');
+    const calls = transcribe.mock.calls as [{ model: { apiKey: string } }][];
+    expect(calls.map(([options]) => options.model.apiKey)).toEqual([
+      'key-a',
+      'key-b',
+    ]);
+    expect(process.env.AI_GATEWAY_API_KEY).toBe(previous);
   });
 
   it('returns the untouched gateway result', async () => {

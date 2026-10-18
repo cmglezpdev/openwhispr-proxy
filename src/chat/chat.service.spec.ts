@@ -51,17 +51,27 @@ describe('ChatService', () => {
     }
   });
 
-  it('exposes the caller api key to the gateway sdk', async () => {
-    await service.generateCompletion('openai/gpt-4o-mini', messages, 'secret');
+  it('isolates concurrent callers without changing the process api key', async () => {
+    const previous = process.env.AI_GATEWAY_API_KEY;
+    await Promise.all(
+      ['key-a', 'key-b'].map((key) =>
+        service.generateCompletion('openai/gpt-4o-mini', messages, key),
+      ),
+    );
 
-    expect(process.env.AI_GATEWAY_API_KEY).toBe('secret');
+    const calls = generateText.mock.calls as [{ model: { apiKey: string } }][];
+    expect(calls.map(([options]) => options.model.apiKey)).toEqual([
+      'key-a',
+      'key-b',
+    ]);
+    expect(process.env.AI_GATEWAY_API_KEY).toBe(previous);
   });
 
   it('omits providerOptions entirely when no gateway option is supplied', async () => {
     await service.generateCompletion('openai/gpt-4o-mini', messages, 'secret');
 
     expect(generateText).toHaveBeenCalledWith({
-      model: 'openai/gpt-4o-mini',
+      model: { modelId: 'openai/gpt-4o-mini', apiKey: 'secret' },
       messages,
       allowSystemInMessages: true,
     });

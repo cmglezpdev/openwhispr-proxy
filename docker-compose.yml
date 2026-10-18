@@ -7,7 +7,7 @@ services:
       PORT: ${PORT:-8080}
       USAGE_DB_PATH: ${USAGE_DB_PATH:-}
     ports:
-      - '${PORT:-8080}:${PORT:-8080}'
+      - '127.0.0.1:${PORT:-8080}:${PORT:-8080}'
     volumes:
       - ./data:/app/data
     restart: unless-stopped

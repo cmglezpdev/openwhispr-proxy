@@ -21,7 +21,7 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
-The proxy is available at `http://localhost:8080`. Open [the dashboard](http://localhost:8080/dashboard) to view usage, then [connect OpenWhispr](#connect-openwhispr) to start recording activity.
+The proxy is available at `http://localhost:8080`. Compose publishes the port on `127.0.0.1`, so access is limited to the Docker host. Open [the dashboard](http://localhost:8080/dashboard) to view usage, then [connect OpenWhispr](#connect-openwhispr) to start recording activity.
 
 Usage data is stored in `./data/usage.db` on the host. The Compose bind mount preserves it when the container is recreated. To stop the application:
 
@@ -54,7 +54,7 @@ Configure both the transcription provider and the language model provider in Ope
 
 Model IDs must include the provider prefix, such as `openai/gpt-4o-mini-transcribe`. Choose a model supported by the Gateway for each operation.
 
-The client sends its Gateway key in the `Authorization: Bearer <key>` header on each request. No server-side API key configuration is needed. If OpenWhispr runs on another machine, use the proxy host's address instead of `localhost`.
+The client sends its Gateway key in the `Authorization: Bearer <key>` header on each request. The proxy creates a Gateway instance with that key for the request. No server-side API key configuration is needed. The included Compose setup expects OpenWhispr to run on the same machine.
 
 ## Dashboard
 
@@ -94,7 +94,11 @@ When using Compose, keep the database inside `/app/data` to use the included per
 
 The three proxy endpoints require a Gateway key. Dashboard routes do not require authentication.
 
+Audio uploads accept one file up to 100 MiB, plus at most 16 text fields of up to 1 MiB each. Oversized files return `413`; extra files or fields and oversized text fields return `400`. These limits apply before the Gateway call. Provider-specific audio limits still apply.
+
 Completed transcription and cleanup calls are stored in the `transcriptions` and `enhanced_transcriptions` tables. Records include text, model, timestamp, latency, cost and Gateway generation ID when available. Transcriptions also include audio duration. Failed requests and dashboard reads do not create usage records.
+
+Incoming-request summaries in the console contain metadata, without message text, API keys or uploaded filenames. Full result text remains in SQLite for inspection in the dashboard. Docker builds exclude local environment files, usage data and Git history from their context.
 
 The database and its parent directory are created on startup. No separate database service is required.
 
@@ -137,6 +141,4 @@ For individual suites, use `pnpm test`, `pnpm test:e2e` or `pnpm test:dashboard`
 
 ## Local-use limits
 
-The dashboard exposes saved text and usage history without authentication. Keep the service on a trusted local network.
-
-Transcription and cleanup currently set the Gateway key through shared process state. Concurrent requests with different keys can interfere with each other. The proxy is intended for a single user's local workflow.
+The proxy is intended for a single user's local workflow. The dashboard exposes saved text and usage history without authentication. Compose restricts the published port to localhost. When running directly with Node, the server listens on all interfaces; use a host firewall or bind it to localhost before relying on local-only access. Changing the Docker port mapping or adding a tunnel can expose the history to other machines.

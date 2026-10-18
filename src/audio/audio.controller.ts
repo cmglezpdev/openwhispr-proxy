@@ -19,7 +19,17 @@ export class AudioController {
   constructor(private readonly audioService: AudioService) {}
 
   @Post('transcriptions')
-  @UseInterceptors(AnyFilesInterceptor())
+  @UseInterceptors(
+    AnyFilesInterceptor({
+      limits: {
+        fileSize: 100 * 1024 * 1024,
+        files: 1,
+        fields: 16,
+        fieldSize: 1024 * 1024,
+        parts: 18,
+      },
+    }),
+  )
   async transcribe(
     @Headers('authorization') authorization: string | undefined,
     @Body() body: Record<string, string>,
@@ -44,7 +54,7 @@ export class AudioController {
     }
 
     this.logger.log(
-      `Incoming transcription request: model=${model}, file=${file.originalname}`,
+      `Incoming transcription request: model=${model}, bytes=${file.size}`,
     );
 
     return this.audioService.transcribe(file, model, apiKey);

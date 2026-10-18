@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { createGateway } from '@ai-sdk/gateway';
 import { generateText, JSONValue } from 'ai';
 import { UsageRepository } from 'src/usage/usage.repository';
 
@@ -23,7 +24,7 @@ export class ChatService {
     apiKey: string,
     options: ChatCompletionOptions = {},
   ): Promise<Awaited<ReturnType<typeof generateText>>> {
-    process.env.AI_GATEWAY_API_KEY = apiKey;
+    const gateway = createGateway({ apiKey });
     const { maxCompletionTokens, reasoningEffort, chatTemplateKwargs } =
       options;
 
@@ -40,7 +41,7 @@ export class ChatService {
 
     const startedAt = performance.now();
     const result = await generateText({
-      model,
+      model: gateway(model),
       messages,
       allowSystemInMessages: true,
       ...(Object.keys(gatewayOptions).length > 0 && {
