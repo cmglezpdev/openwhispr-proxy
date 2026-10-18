@@ -3,6 +3,8 @@ import { DatabaseSync } from 'node:sqlite';
 import { mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { EnvService } from 'src/config/env.service';
+import { UsageHistory } from './domain/usage-request';
+import type { UsageRequest } from './domain/usage-request';
 
 export interface TranscriptionRecord {
   model: string;
@@ -54,11 +56,12 @@ const MIGRATIONS: string[] = [
 ];
 
 @Injectable()
-export class UsageRepository implements OnModuleDestroy {
+export class UsageRepository extends UsageHistory implements OnModuleDestroy {
   private readonly logger = new Logger(UsageRepository.name);
   private readonly db: DatabaseSync;
 
   constructor(env: EnvService) {
+    super();
     const dbPath = env.usageDbPath;
 
     if (dbPath !== ':memory:') {
@@ -125,6 +128,27 @@ export class UsageRepository implements OnModuleDestroy {
         record.costUsd,
         record.generationId,
       );
+  }
+
+  listRequests(): UsageRequest[] {
+    // A single statement gives both tables the same SQLite read snapshot.
+    return this.db
+      .prepare(
+        `
+      SELECT 'transcription:' || id AS key, id, 'transcription' AS kind,
+        strftime('%Y-%m-%dT%H:%M:%SZ', created_at) AS createdAt,
+        model, text, cost_usd AS costUsd, generation_id AS generationId,
+        latency_ms AS latencyMs, duration_seconds AS durationSeconds
+      FROM transcriptions
+      UNION ALL
+      SELECT 'enhancement:' || id, id, 'enhancement',
+        strftime('%Y-%m-%dT%H:%M:%SZ', created_at),
+        model, text, cost_usd, generation_id, latency_ms, NULL
+      FROM enhanced_transcriptions
+      ORDER BY createdAt DESC, key DESC
+    `,
+      )
+      .all() as unknown as UsageRequest[];
   }
 
   onModuleDestroy(): void {

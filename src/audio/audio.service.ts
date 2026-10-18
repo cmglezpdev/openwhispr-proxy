@@ -18,8 +18,9 @@ export class AudioService {
     const latencyMs = Math.round(performance.now() - startedAt);
 
     const { text, durationInSeconds, providerMetadata } = result;
-    const costUsd = providerMetadata.gateway.cost as string;
-    const generationId = providerMetadata.gateway.generationId as string;
+    const costUsd = (providerMetadata?.gateway?.cost as string) ?? null;
+    const generationId =
+      (providerMetadata?.gateway?.generationId as string) ?? null;
     const durationSeconds =
       Number(durationInSeconds) > 0
         ? Number(durationInSeconds)

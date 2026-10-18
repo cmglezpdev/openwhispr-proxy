@@ -12,6 +12,7 @@ import {
   transcribe as sdkTranscribe,
 } from 'ai';
 import { AppModule } from '../src/app.module';
+import type { UsageSnapshot } from '../src/usage/domain/usage-request';
 
 /** Shape of the Nest error payload asserted by the failure-path tests. */
 interface ErrorBody {
@@ -356,5 +357,61 @@ describe('openwhispr-proxy (e2e)', () => {
 
   it('returns 404 for an unknown route', async () => {
     await request(app.getHttpServer()).get('/nope').expect(404);
+  });
+  describe('dashboard history', () => {
+    it('returns the persisted history and leaves it unchanged after invalid requests', async () => {
+      const history = async (): Promise<UsageSnapshot> => {
+        const response = await request(app.getHttpServer())
+          .get('/dashboard/api/requests')
+          .expect(200)
+          .expect('Cache-Control', 'no-store');
+        return response.body as UsageSnapshot;
+      };
+      const before = await history();
+      await request(app.getHttpServer())
+        .post('/v1/chat/completions')
+        .send({ messages: [] })
+        .expect(400);
+      await request(app.getHttpServer())
+        .post('/audio/transcriptions')
+        .field('model', 'openai/whisper-1')
+        .expect(400);
+      const after = await history();
+      expect(after.requests).toEqual(before.requests);
+      expect(typeof after.loadedAt).toBe('string');
+      expect(after.requests.length).toBe(
+        countRows('transcriptions') + countRows('enhanced_transcriptions'),
+      );
+      for (const row of after.requests) {
+        expect(Object.keys(row).sort()).toEqual(
+          [
+            'key',
+            'id',
+            'kind',
+            'createdAt',
+            'model',
+            'text',
+            'costUsd',
+            'generationId',
+            'latencyMs',
+            'durationSeconds',
+          ].sort(),
+        );
+      }
+    });
+    it('serves the Vite HTML and its compiled assets from the existing server', async () => {
+      const response = await request(app.getHttpServer())
+        .get('/dashboard')
+        .expect(200)
+        .expect('Content-Type', /html/);
+      const asset = response.text.match(
+        /src="(\/dashboard\/assets\/[^"]+\.js)"/,
+      );
+      expect(asset).not.toBeNull();
+      await request(app.getHttpServer())
+        .get(asset![1])
+        .expect(200)
+        .expect('Content-Type', /javascript/);
+    });
   });
 });
