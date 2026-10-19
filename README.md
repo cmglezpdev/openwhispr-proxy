@@ -4,7 +4,7 @@
 
 # OpenWhispr Proxy
 
-A local proxy that connects [OpenWhispr](https://github.com/OpenWhispr/openwhispr) to [Vercel AI Gateway](https://vercel.com/docs/ai-gateway) for audio transcription and transcript cleanup. It records usage in SQLite and includes a dashboard to explore request history, model costs and speaking activity.
+[OpenWhispr](https://github.com/OpenWhispr/openwhispr) can use Vercel AI Gateway's text models through its OpenAI-compatible endpoint, but its audio transcription requests do not match the Gateway's audio API. This proxy bridges that gap so OpenWhispr can use Gateway models for transcription. It also routes transcript cleanup through the Gateway and records token usage, cost, latency and audio duration in SQLite. The dashboard shows request history, spending and speaking activity.
 
 Built with TypeScript, NestJS and React. The backend serves the API and dashboard from a single process, with Docker Compose available for local deployment.
 
@@ -33,9 +33,8 @@ Open [the dashboard](http://localhost:8080/dashboard), then
 [connect OpenWhispr](#connect-openwhispr). The port is accessible only on the Docker
 host. No server-side API key is needed.
 
-To use another host port, change the mapping to, for example,
-`-p 127.0.0.1:9090:8080`. To pin a version, replace `:latest` with a published
-version tag such as `:0.2.0`.
+To use another host port, change the mapping, for example, to
+`-p 127.0.0.1:9090:8080`.
 
 Stop and start the container with `docker stop openwhispr-proxy` and
 `docker start openwhispr-proxy`. To update, pull the image, remove the container,
@@ -63,9 +62,6 @@ docker compose -f docker-compose.ghcr.yml up -d
 ```
 
 The image supports `linux/amd64` and `linux/arm64`, including Apple Silicon.
-`latest` tracks the newest published stable release. To select a specific version,
-set `IMAGE_TAG` in a `.env` file next to the Compose file, for example
-`IMAGE_TAG=0.2.0`. Image version tags omit the leading `v` from Git release tags.
 
 The proxy is available at `http://localhost:8080`. Compose publishes the port on `127.0.0.1`, so access is limited to the Docker host. Open [the dashboard](http://localhost:8080/dashboard) to view usage, then [connect OpenWhispr](#connect-openwhispr) to start recording activity.
 
@@ -206,49 +202,11 @@ pnpm build
 
 For individual suites, use `pnpm test`, `pnpm test:e2e` or `pnpm test:dashboard`.
 
-### CI and releases
+## Security and local use
 
-The server and dashboard are one application with one version and one GitHub
-release. The root `package.json` defines the version. Release Please updates both
-package files, `CHANGELOG.md` and `.release-please-manifest.json` in the same PR.
-`pnpm check:version` checks that both package versions match.
-
-The `CI` workflow runs on pull requests, pushes to `main` and manual dispatches.
-It installs the locked dependencies, checks versions, lints both packages, runs
-all test suites and builds the application on Node.js 24.
-`pnpm lint:check` checks server lint
-without modifying files; `pnpm lint` remains available to apply fixes locally.
-
-After all checks pass on `main`, Release Please prepares a release PR from
-Conventional Commits such as `feat: ...` and `fix: ...`. Merging that PR publishes
-the tag and GitHub release after CI passes again. The workflow explicitly
-dispatches CI on generated release branches because PRs created with
-`GITHUB_TOKEN` do not trigger `pull_request` workflows. No extra token is needed.
-
-In GitHub branch protection or a ruleset for `main`, require
-`Application / Node 24` before merging. Workflow files alone do
-not enforce merge restrictions.
-
-After Release Please creates a stable release, CI calls `Publish Docker image`
-directly to build the release tag and push a multi-platform image to
-`ghcr.io/cmglezpdev/openwhispr-proxy`. For `v0.2.0`, the image tags are `0.2.0`
-and `latest`. Publication uses `GITHUB_TOKEN` with `packages: write`; no registry
-secret is needed. The direct workflow call is necessary because releases created
-with `GITHUB_TOKEN` do not trigger another workflow through a release event.
-
-After the first image is published, open the package's settings on GitHub and
-change its visibility to **Public** so users can pull without signing in.
-GHCR packages are private by default, even for a public repository. See
-[GitHub's container registry documentation](https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry).
-The published-image quick start requires that first successful publication and
-visibility change.
-
-To publish an existing release for the first time or retry a failed publication,
-run `Publish Docker image` from the GitHub Actions tab on `main`, supplying an
-existing stable tag such as `v0.2.0`. Enable `publish_latest` only when publishing
-the newest release. Manual runs leave `latest` unchanged by default, so rebuilding
-an older version does not move users back to it.
-
-## Local-use limits
-
-The proxy is intended for a single user's local workflow. The dashboard exposes saved text and usage history without authentication. Compose restricts the published port to localhost. When running directly with Node, the server listens on all interfaces; use a host firewall or bind it to localhost before relying on local-only access. Changing the Docker port mapping or adding a tunnel can expose the history to other machines.
+This proxy is intended for one user's local workflow. The dashboard has no
+authentication, and anyone who can reach it can read saved transcripts and usage
+history. Do not run it on a shared or internet-accessible server, or expose it
+through a tunnel. Docker Compose binds the port to localhost. When running with
+Node.js, the server listens on all network interfaces by default, so use it only
+on a trusted machine and network.
