@@ -1,3 +1,4 @@
+import type { UsageSelectionProps } from '../types';
 import { Select } from '../../../../shared/ui/Select';
 import { useMemo, useState } from 'react';
 import { BarChart3 } from 'lucide-react';
@@ -9,12 +10,7 @@ import { scalePoint } from '@tanstack/charts/scales/point';
 import { tooltip } from '@tanstack/charts/tooltip';
 import { timeline, timelineSeries } from '../../domain/analytics';
 import { localDate } from '../../domain/dates';
-import type {
-  Granularity,
-  Metric,
-  UsageFilters,
-  UsageRequest,
-} from '../../domain/types';
+import type { Granularity, Metric } from '../../domain/types';
 import { money, number } from '../../../../shared/format';
 
 const metricNames: Record<Metric, string> = {
@@ -29,13 +25,7 @@ const periodNames: Record<Granularity, string> = {
   year: 'Year',
 };
 
-export function TimelineChart({
-  requests,
-  filters,
-}: {
-  requests: UsageRequest[];
-  filters: UsageFilters;
-}) {
+export function TimelineChart({ requests, filters }: UsageSelectionProps) {
   const [metric, setMetric] = useState<Metric>('requests');
   const [granularity, setGranularity] = useState<Granularity>('day');
   const [cumulative, setCumulative] = useState(false);

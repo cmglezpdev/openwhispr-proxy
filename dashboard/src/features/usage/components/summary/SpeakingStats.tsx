@@ -1,10 +1,10 @@
+import type { SpeakingStatsProps } from '../types';
 import { useMemo, useState } from 'react';
 import {
   compactSpeakingActivity,
   speakingSummary,
   streakActivity,
 } from '../../domain/activity';
-import type { UsageFilters, UsageRequest } from '../../domain/types';
 import { compactWords, number } from '../../../../shared/format';
 import { CardSparkline } from './CardSparkline';
 
@@ -12,11 +12,7 @@ export function SpeakingStats({
   requests,
   history,
   filters,
-}: {
-  requests: UsageRequest[];
-  history: UsageRequest[];
-  filters: UsageFilters;
-}) {
+}: SpeakingStatsProps) {
   const speech = useMemo(() => speakingSummary(requests), [requests]);
   const speechSeries = useMemo(
     () => compactSpeakingActivity(requests, filters),

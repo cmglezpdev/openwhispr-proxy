@@ -32,7 +32,7 @@ describe('ChatController', () => {
     controller = moduleRef.get(ChatController);
   });
 
-  it('delegates to the service and returns its result', async () => {
+  it('delegates to the service and returns an OpenAI-compatible completion', async () => {
     const result: unknown = await controller.completions('Bearer secret-key', {
       model: 'openai/gpt-4o-mini',
       messages,
@@ -48,7 +48,48 @@ describe('ChatController', () => {
         chatTemplateKwargs: undefined,
       },
     );
-    expect(result).toEqual({ text: 'fix this text' });
+    expect(result).toEqual({
+      id: expect.stringMatching(/^chatcmpl-/) as unknown,
+      object: 'chat.completion',
+      created: expect.any(Number) as unknown,
+      model: 'openai/gpt-4o-mini',
+      choices: [
+        {
+          index: 0,
+          message: { role: 'assistant', content: 'fix this text' },
+          finish_reason: null,
+        },
+      ],
+    });
+  });
+
+  it.each([
+    ['stop', 'stop'],
+    ['length', 'length'],
+    ['content-filter', 'content_filter'],
+    ['tool-calls', 'tool_calls'],
+    ['other', null],
+    ['error', null],
+  ])('maps the SDK finish reason %s to %s', async (sdkReason, expected) => {
+    generateCompletion.mockResolvedValue({
+      text: 'fix this text',
+      finishReason: sdkReason,
+      response: { id: 'gen_test', timestamp: new Date('2026-10-19T00:00:00Z') },
+      usage: { inputTokens: 10, outputTokens: 4, totalTokens: 14 },
+    });
+
+    const result = await controller.completions('Bearer secret-key', {
+      model: 'google/gemini-2.5-flash-lite',
+      messages,
+    });
+
+    expect(result).toMatchObject({
+      id: 'gen_test',
+      created: 1792368000,
+      model: 'google/gemini-2.5-flash-lite',
+      choices: [{ finish_reason: expected }],
+      usage: { prompt_tokens: 10, completion_tokens: 4, total_tokens: 14 },
+    });
   });
 
   it('forwards the OpenAI-style snake_case options as camelCase', async () => {

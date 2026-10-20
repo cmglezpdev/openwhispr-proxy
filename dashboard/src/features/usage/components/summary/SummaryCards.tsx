@@ -1,8 +1,8 @@
+import type { UsageSelectionProps } from '../types';
 import { Select } from '../../../../shared/ui/Select';
 import { useMemo, useState } from 'react';
 import { summarize } from '../../domain/analytics';
 import { compactActivity } from '../../domain/activity';
-import type { UsageFilters, UsageRequest } from '../../domain/types';
 import {
   audioDuration,
   money,
@@ -11,13 +11,7 @@ import {
 } from '../../../../shared/format';
 import { CardSparkline } from './CardSparkline';
 
-export function SummaryCards({
-  requests,
-  filters,
-}: {
-  requests: UsageRequest[];
-  filters: UsageFilters;
-}) {
+export function SummaryCards({ requests, filters }: UsageSelectionProps) {
   const [audioUnit, setAudioUnit] = useState<AudioUnit>('auto');
   const summary = useMemo(() => summarize(requests), [requests]);
   const buckets = useMemo(

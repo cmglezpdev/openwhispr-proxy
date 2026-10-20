@@ -1,16 +1,10 @@
+import type { RequestDetailProps } from '../types';
 import { Button, IconButton } from '../../../../shared/ui/Button';
 import { useEffect, useRef, useState } from 'react';
 import { Copy, X } from 'lucide-react';
-import type { UsageRequest } from '../../domain/types';
 import { dateTime, duration, latency, money } from '../../../../shared/format';
 
-export function RequestDetail({
-  request,
-  onClose,
-}: {
-  request: UsageRequest;
-  onClose: () => void;
-}) {
+export function RequestDetail({ request, onClose }: RequestDetailProps) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [copied, setCopied] = useState('Copy details');
   useEffect(() => {

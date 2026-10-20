@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import {
   BadRequestException,
   Body,
@@ -28,7 +29,7 @@ export class ChatController {
   async completions(
     @Headers('authorization') authorization: string | undefined,
     @Body() body: ChatCompletionsBody,
-  ): Promise<any> {
+  ) {
     const model = body.model;
     const messages = body.messages;
     const apiKey = authorization?.replace(/^Bearer\s+/i, '');
@@ -51,10 +52,48 @@ export class ChatController {
       `Incoming chat completion request: model=${model}, messages=${messages.length}`,
     );
 
-    return this.chatService.generateCompletion(model, messages, apiKey, {
-      maxCompletionTokens: body.max_completion_tokens,
-      reasoningEffort: body.reasoning_effort,
-      chatTemplateKwargs: body.chat_template_kwargs,
-    });
+    const result = await this.chatService.generateCompletion(
+      model,
+      messages,
+      apiKey,
+      {
+        maxCompletionTokens: body.max_completion_tokens,
+        reasoningEffort: body.reasoning_effort,
+        chatTemplateKwargs: body.chat_template_kwargs,
+      },
+    );
+
+    // OpenWhispr reads the OpenAI wire format, not the AI SDK result object.
+    const finishReason = {
+      stop: 'stop',
+      length: 'length',
+      'content-filter': 'content_filter',
+      'tool-calls': 'tool_calls',
+      error: null,
+      other: null,
+    }[result.finishReason];
+
+    return {
+      id: result.finalStep.response?.id ?? `chatcmpl-${randomUUID()}`,
+      object: 'chat.completion',
+      created: Math.floor(
+        (result.finalStep.response?.timestamp?.getTime() ?? Date.now()) / 1000,
+      ),
+      model,
+      choices: [
+        {
+          index: 0,
+          message: { role: 'assistant', content: result.text },
+          finish_reason: finishReason ?? null,
+        },
+      ],
+      ...(result.usage && {
+        usage: {
+          prompt_tokens: result.usage.inputTokens,
+          completion_tokens: result.usage.outputTokens,
+          total_tokens: result.usage.totalTokens,
+        },
+      }),
+    };
   }
 }

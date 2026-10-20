@@ -1,12 +1,13 @@
+import type { CardSparklineProps, SparklinePoint } from '../types';
 import { useId } from 'react';
 
 /** Decorative view of real aggregates; null intervals remain visible gaps. */
-export function CardSparkline({ values }: { values: (number | null)[] }) {
+export function CardSparkline({ values }: CardSparklineProps) {
   const id = useId();
   if (!values.some((value) => value !== null)) return null;
   const maximum = Math.max(...values.map((value) => value ?? 0), 1e-9);
-  const segments: { x: number; y: number }[][] = [];
-  let segment: { x: number; y: number }[] = [];
+  const segments: SparklinePoint[][] = [];
+  let segment: SparklinePoint[] = [];
   values.forEach((value, index) => {
     if (value === null) {
       if (segment.length) segments.push(segment);

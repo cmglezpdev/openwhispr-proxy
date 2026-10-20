@@ -1,3 +1,4 @@
+import type { UsageRequestsProps } from '../types';
 import { Select } from '../../../../shared/ui/Select';
 import { IconButton } from '../../../../shared/ui/Button';
 import { useMemo, useState } from 'react';
@@ -37,7 +38,7 @@ const features = tableFeatures({
 });
 const helper = createColumnHelper<typeof features, UsageRequest>();
 
-export function RequestsTable({ requests }: { requests: UsageRequest[] }) {
+export function RequestsTable({ requests }: UsageRequestsProps) {
   const [selected, setSelected] = useState<UsageRequest | null>(null);
   const columns = useMemo(
     () =>

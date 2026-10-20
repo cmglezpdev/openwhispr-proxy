@@ -312,7 +312,11 @@ describe('openwhispr-proxy (e2e)', () => {
         .send({ model: 'openai/gpt-4o-mini', messages })
         .expect(201);
 
-      expect(response.body).toMatchObject({ text: 'Hello world.' });
+      // Custom OpenAI-compatible providers read this path during cleanup.
+      const body = response.body as {
+        choices?: { message?: { content?: string } }[];
+      };
+      expect(body.choices?.[0]?.message?.content).toBe('Hello world.');
       expect(countRows('enhanced_transcriptions')).toBe(before + 1);
       expect(lastRow('enhanced_transcriptions')).toMatchObject({
         model: 'openai/gpt-4o-mini',
