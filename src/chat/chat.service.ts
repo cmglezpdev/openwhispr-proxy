@@ -1,18 +1,13 @@
-import { Injectable } from '@nestjs/common';
-import { createGateway } from '@ai-sdk/gateway';
-import { generateText, JSONValue } from 'ai';
-import { UsageRepository } from 'src/usage/usage.repository';
-
-export interface ChatMessage {
-  role: 'system' | 'user';
-  content: string;
-}
-
-export interface ChatCompletionOptions {
-  maxCompletionTokens?: number;
-  reasoningEffort?: string;
-  chatTemplateKwargs?: Record<string, JSONValue>;
-}
+import { BadGatewayException, Injectable } from '@nestjs/common';
+import { createOpenAICompatible } from '@ai-sdk/openai-compatible';
+import { generateText } from 'ai';
+import type { JsonObject } from '../common/types/json-value';
+import { UsageRepository } from '../usage/usage.repository';
+import { isRecord, readChatUsage } from '../ai/infrastructure/gateway-metadata';
+import type {
+  ChatMessage,
+  ChatCompletionOptions,
+} from './types/chat-completion';
 
 @Injectable()
 export class ChatService {
@@ -23,48 +18,40 @@ export class ChatService {
     messages: ChatMessage[],
     apiKey: string,
     options: ChatCompletionOptions = {},
-  ): Promise<Awaited<ReturnType<typeof generateText>>> {
-    const gateway = createGateway({ apiKey });
-    const { maxCompletionTokens, reasoningEffort, chatTemplateKwargs } =
-      options;
-
-    const gatewayOptions: Record<string, JSONValue> = {};
-    if (maxCompletionTokens !== undefined) {
-      gatewayOptions.maxCompletionTokens = maxCompletionTokens;
-    }
-    if (reasoningEffort !== undefined) {
-      gatewayOptions.reasoningEffort = reasoningEffort;
-    }
-    if (chatTemplateKwargs !== undefined) {
-      gatewayOptions.chat_template_kwargs = chatTemplateKwargs;
-    }
-
+  ): Promise<unknown> {
     const startedAt = performance.now();
+    const gateway = createOpenAICompatible({
+      name: 'gateway',
+      apiKey,
+      baseURL: 'https://ai-gateway.vercel.sh/v1',
+    });
+    const gatewayOptions: JsonObject = {};
+    if (options.maxCompletionTokens !== undefined)
+      gatewayOptions.max_completion_tokens = options.maxCompletionTokens;
+    if (options.reasoningEffort !== undefined)
+      gatewayOptions.reasoningEffort = options.reasoningEffort;
+    if (options.chatTemplateKwargs !== undefined)
+      gatewayOptions.chat_template_kwargs = options.chatTemplateKwargs;
+
     const result = await generateText({
       model: gateway(model),
       messages,
       allowSystemInMessages: true,
+      include: { responseBody: true },
       ...(Object.keys(gatewayOptions).length > 0 && {
         providerOptions: { gateway: gatewayOptions },
       }),
     });
-    const latencyMs = Math.round(performance.now() - startedAt);
-
-    const { text, steps } = result;
-    const finalStep = steps.at(-1);
-    const costUsd =
-      (finalStep?.providerMetadata?.gateway?.cost as string) ?? null;
-    const generationId =
-      (finalStep?.providerMetadata?.gateway?.generationId as string) ?? null;
-
+    const responseBody = result.finalStep.response.body;
+    if (!isRecord(responseBody)) {
+      throw new BadGatewayException('Gateway response body is missing');
+    }
     this.usageRepo.saveEnhancedTranscription({
       model,
-      text,
-      latencyMs,
-      costUsd,
-      generationId,
+      text: result.text,
+      ...readChatUsage(responseBody),
+      latencyMs: Math.round(performance.now() - startedAt),
     });
-
-    return result;
+    return responseBody;
   }
 }

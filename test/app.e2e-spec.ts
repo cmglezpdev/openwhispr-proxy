@@ -6,23 +6,9 @@ import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import request from 'supertest';
 import type { App } from 'supertest/types';
-import { createGateway as sdkCreateGateway } from '@ai-sdk/gateway';
-import {
-  generateText as sdkGenerateText,
-  transcribe as sdkTranscribe,
-} from 'ai';
+import { createGateway, generateText, transcribe } from './support/sdk-mocks';
 import { AppModule } from '../src/app.module';
 import type { UsageSnapshot } from '../src/usage/domain/usage-request';
-
-/** Shape of the Nest error payload asserted by the failure-path tests. */
-interface ErrorBody {
-  message: string;
-}
-
-// `ai` and `@ai-sdk/gateway` are mocked globally in test/jest-setup.ts
-const transcribe = sdkTranscribe as unknown as jest.Mock;
-const generateText = sdkGenerateText as unknown as jest.Mock;
-const createGateway = sdkCreateGateway as unknown as jest.Mock;
 
 /** Builds a minimal valid WAV with a known duration (seconds). */
 const buildWav = (seconds: number): Buffer => {
@@ -61,11 +47,11 @@ describe('openwhispr-proxy (e2e)', () => {
   const countRows = (table: string): number => {
     const db = new DatabaseSync(dbPath);
     try {
-      return (
-        db.prepare(`SELECT COUNT(*) AS total FROM ${table}`).get() as {
-          total: number;
-        }
-      ).total;
+      const total = db
+        .prepare(`SELECT COUNT(*) AS total FROM ${table}`)
+        .get()?.total;
+      if (typeof total !== 'number') throw new Error('Missing row count');
+      return total;
     } finally {
       db.close();
     }
@@ -74,9 +60,11 @@ describe('openwhispr-proxy (e2e)', () => {
   const lastRow = (table: string): Record<string, unknown> => {
     const db = new DatabaseSync(dbPath);
     try {
-      return db
+      const row = db
         .prepare(`SELECT * FROM ${table} ORDER BY id DESC LIMIT 1`)
-        .get() as Record<string, unknown>;
+        .get();
+      if (!row) throw new Error('Missing usage record');
+      return row;
     } finally {
       db.close();
     }
@@ -112,25 +100,43 @@ describe('openwhispr-proxy (e2e)', () => {
 
     generateText.mockReset().mockResolvedValue({
       text: 'Hello world.',
-      steps: [
-        {
-          providerMetadata: {
-            gateway: { cost: '0.002', generationId: 'gen_chat' },
+      finalStep: {
+        response: {
+          body: {
+            id: 'gen_chat',
+            object: 'chat.completion',
+            choices: [
+              {
+                index: 0,
+                message: {
+                  role: 'assistant',
+                  content: 'Hello world.',
+                  provider_metadata: {
+                    gateway: { cost: '0.002', generationId: 'gen_chat' },
+                  },
+                },
+                finish_reason: 'stop',
+              },
+            ],
+            usage: {
+              prompt_tokens: 10,
+              completion_tokens: 4,
+              total_tokens: 14,
+            },
+            gateway_extension: { preserved: true },
           },
         },
-      ],
+      },
     });
 
-    createGateway
-      .mockReset()
-      .mockImplementation(({ apiKey }: { apiKey: string }) =>
-        Object.assign((modelId: string) => ({ modelId, apiKey }), {
-          transcriptionModel: (modelId: string) => ({ modelId, apiKey }),
-          getAvailableModels: jest.fn().mockResolvedValue({
-            models: [{ id: 'openai/gpt-4o-mini' }],
-          }),
+    createGateway.mockReset().mockImplementation(({ apiKey }) =>
+      Object.assign((modelId: string) => ({ modelId, apiKey }), {
+        transcriptionModel: (modelId: string) => ({ modelId, apiKey }),
+        getAvailableModels: jest.fn().mockResolvedValue({
+          models: [{ id: 'openai/gpt-4o-mini' }],
         }),
-      );
+      }),
+    );
   });
 
   describe('POST /audio/transcriptions', () => {
@@ -164,7 +170,7 @@ describe('openwhispr-proxy (e2e)', () => {
         .attach('file', Buffer.from('fake audio'), 'sample.wav')
         .expect(201);
 
-      const [{ audio }] = transcribe.mock.calls[0] as [{ audio: Buffer }];
+      const [{ audio }] = transcribe.mock.calls[0];
       expect(audio.toString()).toBe('fake audio');
     });
 
@@ -243,9 +249,9 @@ describe('openwhispr-proxy (e2e)', () => {
     it('rejects a request with no file', async () => {
       const response = await post().field('model', 'whisper-1').expect(400);
 
-      expect((response.body as ErrorBody).message).toBe(
-        'No audio file provided',
-      );
+      expect(response.body).toMatchObject({
+        message: 'No audio file provided',
+      });
       expect(transcribe).not.toHaveBeenCalled();
     });
 
@@ -254,7 +260,7 @@ describe('openwhispr-proxy (e2e)', () => {
         .attach('file', Buffer.from('fake audio'), 'sample.wav')
         .expect(400);
 
-      expect((response.body as ErrorBody).message).toBe('Model is required');
+      expect(response.body).toMatchObject({ message: 'Model is required' });
       expect(transcribe).not.toHaveBeenCalled();
     });
 
@@ -264,9 +270,10 @@ describe('openwhispr-proxy (e2e)', () => {
         .attach('file', Buffer.from('fake audio'), 'sample.wav')
         .expect(400);
 
-      expect((response.body as ErrorBody).message).toBe(
-        'Model must be in <provider>/<model> format (e.g. openai/whisper-1)',
-      );
+      expect(response.body).toMatchObject({
+        message:
+          'Model must be in <provider>/<model> format (e.g. openai/whisper-1)',
+      });
       expect(transcribe).not.toHaveBeenCalled();
     });
 
@@ -277,7 +284,7 @@ describe('openwhispr-proxy (e2e)', () => {
         .attach('file', Buffer.from('fake audio'), 'sample.wav')
         .expect(400);
 
-      expect((response.body as ErrorBody).message).toBe('API key is required');
+      expect(response.body).toMatchObject({ message: 'API key is required' });
       expect(transcribe).not.toHaveBeenCalled();
     });
 
@@ -312,11 +319,14 @@ describe('openwhispr-proxy (e2e)', () => {
         .send({ model: 'openai/gpt-4o-mini', messages })
         .expect(201);
 
-      // Custom OpenAI-compatible providers read this path during cleanup.
-      const body = response.body as {
-        choices?: { message?: { content?: string } }[];
-      };
-      expect(body.choices?.[0]?.message?.content).toBe('Hello world.');
+      expect(response.body).toMatchObject({
+        choices: [{ message: { content: 'Hello world.' } }],
+      });
+      const sdkCall = generateText.mock.results[0];
+      if (sdkCall.type !== 'return')
+        throw new Error('Generation did not return');
+      const sdkResult = await sdkCall.value;
+      expect(response.body).toEqual(sdkResult.finalStep.response.body);
       expect(countRows('enhanced_transcriptions')).toBe(before + 1);
       expect(lastRow('enhanced_transcriptions')).toMatchObject({
         model: 'openai/gpt-4o-mini',
@@ -339,7 +349,7 @@ describe('openwhispr-proxy (e2e)', () => {
       expect(generateText).toHaveBeenCalledWith(
         expect.objectContaining({
           providerOptions: {
-            gateway: { maxCompletionTokens: 256, reasoningEffort: 'low' },
+            gateway: { max_completion_tokens: 256, reasoningEffort: 'low' },
           },
         }),
       );
@@ -360,7 +370,7 @@ describe('openwhispr-proxy (e2e)', () => {
     ])('rejects a request with %s', async (_label, body, message) => {
       const response = await post().send(body).expect(400);
 
-      expect((response.body as ErrorBody).message).toBe(message);
+      expect(response.body).toMatchObject({ message: message });
       expect(generateText).not.toHaveBeenCalled();
     });
 
@@ -369,9 +379,10 @@ describe('openwhispr-proxy (e2e)', () => {
         .send({ model: 'gpt-4o-mini', messages })
         .expect(400);
 
-      expect((response.body as ErrorBody).message).toBe(
-        'Model must be in <provider>/<model> format (e.g. openai/gpt-4o-mini)',
-      );
+      expect(response.body).toMatchObject({
+        message:
+          'Model must be in <provider>/<model> format (e.g. openai/gpt-4o-mini)',
+      });
       expect(generateText).not.toHaveBeenCalled();
     });
 
@@ -381,7 +392,7 @@ describe('openwhispr-proxy (e2e)', () => {
         .send({ model: 'openai/gpt-4o-mini', messages })
         .expect(400);
 
-      expect((response.body as ErrorBody).message).toBe('API key is required');
+      expect(response.body).toMatchObject({ message: 'API key is required' });
       expect(generateText).not.toHaveBeenCalled();
     });
 
@@ -411,7 +422,7 @@ describe('openwhispr-proxy (e2e)', () => {
         .get('/models')
         .expect(400);
 
-      expect((response.body as ErrorBody).message).toBe('API key is required');
+      expect(response.body).toMatchObject({ message: 'API key is required' });
       expect(createGateway).not.toHaveBeenCalled();
     });
   });
