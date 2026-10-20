@@ -209,7 +209,24 @@ pnpm build
 
 For individual suites, use `pnpm test`, `pnpm test:e2e` or `pnpm test:dashboard`.
 
-Backend lint rejects inline object type annotations, explicit `any` and unhandled promises.
+### Check the real SDK locally
+
+This simulation exercises the actual AI SDK over HTTP and verifies that cleanup returns the original response and records its text, cost and generation ID in SQLite. It uses a contract fixture based on Vercel's [Chat Completions response](https://vercel.com/docs/ai-gateway/sdks-and-apis/openai-chat-completions/chat-completions), without a live Gateway call or API credits.
+
+With Postman CLI installed, start the simulation in one terminal:
+
+```bash
+postman simulation run postman/simulations/cleanup.sim.yaml --port 4900 --no-history
+```
+
+In another terminal:
+
+```bash
+pnpm build:server
+node test/chat-gateway-smoke.cjs http://127.0.0.1:4900/gateway
+```
+
+Stop the simulation with Ctrl+C when the check completes. Backend lint rejects inline object type annotations, explicit `any` and unhandled promises.
 
 ## Security and local use
 
