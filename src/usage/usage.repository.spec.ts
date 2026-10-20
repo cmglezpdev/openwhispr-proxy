@@ -6,8 +6,10 @@ import { EnvService } from 'src/config/env.service';
 import { UsageRepository } from './usage.repository';
 
 /** Stubs only the field UsageRepository actually reads from EnvService. */
-const stubEnv = (usageDbPath: string): EnvService =>
-  ({ usageDbPath }) as EnvService;
+const stubEnv = (usageDbPath: string): EnvService => ({
+  usageDbPath,
+  port: 8080,
+});
 
 /**
  * Integration test: runs against a real SQLite file, no mocks.
@@ -45,11 +47,10 @@ describe('UsageRepository', () => {
     db
       .prepare(`PRAGMA table_info(${table})`)
       .all()
-      .map((row) => (row as { name: string }).name);
+      .map((row) => String(row.name));
 
   const schemaVersionOf = (db: DatabaseSync): number =>
-    (db.prepare('PRAGMA user_version').get() as { user_version: number })
-      .user_version;
+    Number(db.prepare('PRAGMA user_version').get()?.user_version);
 
   beforeEach(() => {
     tempDir = mkdtempSync(join(tmpdir(), 'openwhispr-usage-'));
@@ -71,7 +72,7 @@ describe('UsageRepository', () => {
         tables: db
           .prepare(`SELECT name FROM sqlite_master WHERE type = 'table'`)
           .all()
-          .map((row) => (row as { name: string }).name),
+          .map((row) => String(row.name)),
       }));
 
       expect(version).toBe(2);
@@ -249,7 +250,7 @@ describe('UsageRepository', () => {
         db
           .prepare('SELECT text FROM transcriptions ORDER BY id')
           .all()
-          .map((row) => (row as { text: string }).text),
+          .map((row) => row.text),
       );
 
       expect(rows).toEqual(['first', 'second', 'third']);
@@ -270,11 +271,9 @@ describe('UsageRepository', () => {
         row: db
           .prepare('SELECT * FROM enhanced_transcriptions')
           .get() as Record<string, unknown>,
-        transcriptionCount: (
-          db.prepare('SELECT COUNT(*) AS total FROM transcriptions').get() as {
-            total: number;
-          }
-        ).total,
+        transcriptionCount: db
+          .prepare('SELECT COUNT(*) AS total FROM transcriptions')
+          .get()?.total,
       }));
 
       expect(row).toEqual(
