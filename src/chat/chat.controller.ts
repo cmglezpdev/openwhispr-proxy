@@ -1,3 +1,4 @@
+import { requireApiKey } from '../common/http/authorization';
 import {
   BadRequestException,
   Body,
@@ -30,8 +31,7 @@ export class ChatController {
 
     assertProviderModelFormat(model, 'openai/gpt-4o-mini');
 
-    const apiKey = authorization?.replace(/^Bearer\s+/i, '');
-    if (!apiKey) throw new BadRequestException('API key is required');
+    const apiKey = requireApiKey(authorization);
 
     if (!messages || messages.length === 0) {
       throw new BadRequestException('Messages are required');

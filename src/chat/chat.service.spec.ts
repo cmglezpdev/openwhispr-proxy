@@ -1,104 +1,70 @@
 import { Test } from '@nestjs/testing';
-import { generateText } from '../../test/support/sdk-mocks';
-import { UsageRepository } from '../usage/usage.repository';
-import { ChatService } from './chat.service';
+import { AiProvider } from '../ai/application/ai-provider';
+import { UsageRecorder } from '../usage/domain/usage-recorder';
+import type { GenerationResult } from '../ai/application/generation-result';
 import type { ChatMessage } from './types/chat-completion';
+import { ChatService } from './chat.service';
 
-const messages: ChatMessage[] = [{ role: 'user', content: 'hello' }];
-const responseBody = {
-  choices: [
-    {
-      message: {
-        content: 'Hello.',
-        provider_metadata: {
-          gateway: { cost: '0.002', generationId: 'gen_chat' },
-        },
-      },
-    },
-  ],
-  provider_extension: 'preserved',
+const messages: ChatMessage[] = [{ role: 'user', content: 'fix this text' }];
+const completion: GenerationResult = {
+  text: 'Fix this text.',
+  responseBody: { choices: [{ message: { content: 'Fix this text.' } }] },
+  costUsd: '0.002',
+  generationId: 'gen_chat',
 };
 
 describe('ChatService', () => {
+  const completeChat = jest.fn<
+    ReturnType<AiProvider['completeChat']>,
+    Parameters<AiProvider['completeChat']>
+  >();
+  const saveEnhancedTranscription = jest.fn<
+    ReturnType<UsageRecorder['saveEnhancedTranscription']>,
+    Parameters<UsageRecorder['saveEnhancedTranscription']>
+  >();
   let service: ChatService;
-  const saveEnhancedTranscription = jest.fn();
+
   beforeEach(async () => {
-    generateText
-      .mockReset()
-      .mockResolvedValue({
-        text: 'Hello.',
-        finalStep: { response: { body: responseBody } },
-      });
+    completeChat.mockReset().mockResolvedValue(completion);
     saveEnhancedTranscription.mockReset();
     const moduleRef = await Test.createTestingModule({
       providers: [
         ChatService,
-        { provide: UsageRepository, useValue: { saveEnhancedTranscription } },
+        { provide: AiProvider, useValue: { completeChat } },
+        { provide: UsageRecorder, useValue: { saveEnhancedTranscription } },
       ],
     }).compile();
     service = moduleRef.get(ChatService);
   });
-  it('returns the original cleanup response and records its usage', async () => {
-    expect(
-      await service.generateCompletion(
-        'google/gemini-2.5-flash-lite',
-        messages,
-        'key',
-      ),
-    ).toBe(responseBody);
+
+  it('records a completed cleanup and returns the same response body', async () => {
+    const body = await service.generateCompletion(
+      'google/gemini-2.5-flash-lite',
+      messages,
+      'key',
+      { reasoningEffort: 'low' },
+    );
+    expect(completeChat).toHaveBeenCalledWith({
+      model: 'google/gemini-2.5-flash-lite',
+      messages,
+      apiKey: 'key',
+      options: { reasoningEffort: 'low' },
+    });
+    expect(body).toBe(completion.responseBody);
     expect(saveEnhancedTranscription).toHaveBeenCalledWith({
       model: 'google/gemini-2.5-flash-lite',
-      text: 'Hello.',
+      text: completion.text,
       costUsd: '0.002',
       generationId: 'gen_chat',
       latencyMs: expect.any(Number) as unknown,
     });
-    expect(generateText).toHaveBeenCalledWith({
-      model: { modelId: 'google/gemini-2.5-flash-lite', apiKey: 'key' },
-      messages,
-      allowSystemInMessages: true,
-      include: { responseBody: true },
-    });
+    expect(
+      saveEnhancedTranscription.mock.calls[0][0].latencyMs,
+    ).toBeGreaterThanOrEqual(0);
   });
-  it('forwards the supplied cleanup options through the compatible provider', async () => {
-    await service.generateCompletion(
-      'google/gemini-2.5-flash-lite',
-      messages,
-      'key',
-      {
-        maxCompletionTokens: 256,
-        reasoningEffort: 'low',
-        chatTemplateKwargs: { thinking: false },
-      },
-    );
-    expect(generateText).toHaveBeenCalledWith(
-      expect.objectContaining({
-        providerOptions: {
-          gateway: {
-            max_completion_tokens: 256,
-            reasoningEffort: 'low',
-            chat_template_kwargs: { thinking: false },
-          },
-        },
-      }),
-    );
-  });
-  it('does not persist a result when the original response body is absent', async () => {
-    generateText.mockResolvedValue({
-      text: 'Hello.',
-      finalStep: { response: {} },
-    });
-    await expect(
-      service.generateCompletion(
-        'google/gemini-2.5-flash-lite',
-        messages,
-        'key',
-      ),
-    ).rejects.toThrow('Gateway response body is missing');
-    expect(saveEnhancedTranscription).not.toHaveBeenCalled();
-  });
-  it('does not persist usage when the gateway fails', async () => {
-    generateText.mockRejectedValue(new Error('gateway down'));
+
+  it('does not persist usage when generation fails', async () => {
+    completeChat.mockRejectedValue(new Error('gateway down'));
     await expect(
       service.generateCompletion(
         'google/gemini-2.5-flash-lite',

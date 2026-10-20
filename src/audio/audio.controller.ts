@@ -1,3 +1,4 @@
+import { requireApiKey } from '../common/http/authorization';
 import {
   BadRequestException,
   Body,
@@ -41,7 +42,6 @@ export class AudioController {
     }
 
     const model = body.model;
-    const apiKey = authorization?.replace(/^Bearer\s+/i, '');
 
     if (!model) {
       throw new BadRequestException('Model is required');
@@ -49,14 +49,12 @@ export class AudioController {
 
     assertProviderModelFormat(model, 'openai/whisper-1');
 
-    if (!apiKey) {
-      throw new BadRequestException('API key is required');
-    }
+    const apiKey = requireApiKey(authorization);
 
     this.logger.log(
       `Incoming transcription request: model=${model}, bytes=${file.size}`,
     );
 
-    return this.audioService.transcribe(file, model, apiKey);
+    return this.audioService.transcribe(file.buffer, model, apiKey);
   }
 }

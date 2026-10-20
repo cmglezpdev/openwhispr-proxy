@@ -1,22 +1,18 @@
 import { Test } from '@nestjs/testing';
-import { transcribe as sdkTranscribe } from 'ai';
-import { UsageRepository } from 'src/usage/usage.repository';
+import { AiProvider } from '../ai/application/ai-provider';
+import { UsageRecorder } from '../usage/domain/usage-recorder';
+import type { TranscriptionResult } from '../ai/application/generation-result';
 import { AudioService } from './audio.service';
 
-// `ai` is mocked globally in test/jest-setup.ts
-const transcribe = sdkTranscribe as unknown as jest.Mock;
+const transcribe = jest.fn<
+  ReturnType<AiProvider['transcribeAudio']>,
+  Parameters<AiProvider['transcribeAudio']>
+>();
 
-const buildFile = (): Express.Multer.File =>
-  ({
-    fieldname: 'file',
-    originalname: 'sample.wav',
-    mimetype: 'audio/wav',
-    size: 4,
-    buffer: Buffer.from('fake'),
-  }) as Express.Multer.File;
+const buildFile = () => Buffer.from('fake');
 
 /** Builds a minimal valid WAV with a known duration (seconds). */
-const buildWav = (seconds: number): Express.Multer.File => {
+const buildWav = (seconds: number): Buffer => {
   const sampleRate = 8000;
   const channels = 1;
   const bitsPerSample = 16;
@@ -36,21 +32,18 @@ const buildWav = (seconds: number): Express.Multer.File => {
   buffer.writeUInt16LE(bitsPerSample, 34);
   buffer.write('data', 36);
   buffer.writeUInt32LE(dataSize, 40);
-  return {
-    fieldname: 'file',
-    originalname: 'sample.wav',
-    mimetype: 'audio/wav',
-    size: buffer.length,
-    buffer,
-  } as Express.Multer.File;
+  return buffer;
 };
 
-const gatewayResult = (overrides: Record<string, unknown> = {}) => ({
+const responseBody = { text: 'hello world' };
+const gatewayResult = (
+  overrides: Partial<TranscriptionResult> = {},
+): TranscriptionResult => ({
   text: 'hello world',
   durationInSeconds: 12.5,
-  providerMetadata: {
-    gateway: { cost: '0.0004', generationId: 'gen_123' },
-  },
+  costUsd: '0.0004',
+  generationId: 'gen_123',
+  responseBody,
   ...overrides,
 });
 
@@ -66,7 +59,8 @@ describe('AudioService', () => {
     const moduleRef = await Test.createTestingModule({
       providers: [
         AudioService,
-        { provide: UsageRepository, useValue: { saveTranscription } },
+        { provide: UsageRecorder, useValue: { saveTranscription } },
+        { provide: AiProvider, useValue: { transcribeAudio: transcribe } },
       ],
     }).compile();
 
@@ -81,33 +75,6 @@ describe('AudioService', () => {
     }
   });
 
-  it('calls the gateway with the model and the raw audio buffer', async () => {
-    const file = buildFile();
-
-    await service.transcribe(file, 'openai/whisper-1', 'secret-key');
-
-    expect(transcribe).toHaveBeenCalledWith({
-      model: { modelId: 'openai/whisper-1', apiKey: 'secret-key' },
-      audio: file.buffer,
-    });
-  });
-
-  it('isolates concurrent callers without changing the process api key', async () => {
-    const previous = process.env.AI_GATEWAY_API_KEY;
-    await Promise.all(
-      ['key-a', 'key-b'].map((key) =>
-        service.transcribe(buildFile(), 'openai/whisper-1', key),
-      ),
-    );
-
-    const calls = transcribe.mock.calls as [{ model: { apiKey: string } }][];
-    expect(calls.map(([options]) => options.model.apiKey)).toEqual([
-      'key-a',
-      'key-b',
-    ]);
-    expect(process.env.AI_GATEWAY_API_KEY).toBe(previous);
-  });
-
   it('returns the untouched gateway result', async () => {
     const result: unknown = await service.transcribe(
       buildFile(),
@@ -115,7 +82,7 @@ describe('AudioService', () => {
       'secret-key',
     );
 
-    expect(result).toEqual(gatewayResult());
+    expect(result).toBe(responseBody);
   });
 
   it('persists cost, duration and latency for the transcription', async () => {
@@ -130,9 +97,6 @@ describe('AudioService', () => {
       costUsd: '0.0004',
       generationId: 'gen_123',
     });
-
-    const [record] = saveTranscription.mock.calls[0] as [{ latencyMs: number }];
-    expect(record.latencyMs).toBeGreaterThanOrEqual(0);
   });
 
   it('uses the file duration when the gateway omits it', async () => {

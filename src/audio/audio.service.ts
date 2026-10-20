@@ -1,41 +1,34 @@
 import { Injectable } from '@nestjs/common';
-import { createGateway } from '@ai-sdk/gateway';
-import { transcribe } from 'ai';
-import { UsageRepository } from 'src/usage/usage.repository';
+import { AiProvider } from '../ai/application/ai-provider';
+import { UsageRecorder } from '../usage/domain/usage-recorder';
 import { getAudioDurationSeconds } from './audio-duration';
 
 @Injectable()
 export class AudioService {
-  constructor(private readonly transcriptionsRepo: UsageRepository) {}
+  constructor(
+    private readonly provider: AiProvider,
+    private readonly usage: UsageRecorder,
+  ) {}
 
-  async transcribe(file: Express.Multer.File, model: string, apiKey: string) {
-    const gateway = createGateway({ apiKey });
+  async transcribe(
+    audio: Buffer,
+    model: string,
+    apiKey: string,
+  ): Promise<unknown> {
     const startedAt = performance.now();
-
-    const result = await transcribe({
-      model: gateway.transcriptionModel(model),
-      audio: file.buffer,
-    });
-    const latencyMs = Math.round(performance.now() - startedAt);
-
-    const { text, durationInSeconds, providerMetadata } = result;
-    const costUsd = (providerMetadata?.gateway?.cost as string) ?? null;
-    const generationId =
-      (providerMetadata?.gateway?.generationId as string) ?? null;
+    const result = await this.provider.transcribeAudio(audio, model, apiKey);
     const durationSeconds =
-      Number(durationInSeconds) > 0
-        ? Number(durationInSeconds)
-        : getAudioDurationSeconds(file.buffer);
-
-    this.transcriptionsRepo.saveTranscription({
+      result.durationInSeconds !== undefined && result.durationInSeconds > 0
+        ? result.durationInSeconds
+        : getAudioDurationSeconds(audio);
+    this.usage.saveTranscription({
       model,
-      text,
+      text: result.text,
       durationSeconds,
-      latencyMs,
-      costUsd,
-      generationId,
+      costUsd: result.costUsd,
+      generationId: result.generationId,
+      latencyMs: Math.round(performance.now() - startedAt),
     });
-
-    return result;
+    return result.responseBody;
   }
 }

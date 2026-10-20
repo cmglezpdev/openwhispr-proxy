@@ -181,14 +181,20 @@ pnpm dev:dashboard
 
 Open the frontend URL printed in the terminal at `/dashboard/`. The development server forwards dashboard API requests to the backend using `PORT` from the environment or root `.env`.
 
-| Directory                               | Responsibility                                           |
-| --------------------------------------- | -------------------------------------------------------- |
-| `src/audio/`, `src/chat/`, `src/model/` | Gateway request handling.                                |
-| `src/usage/`                            | SQLite persistence and the shared usage contract.        |
-| `src/dashboard/`                        | Dashboard HTTP endpoints.                                |
-| `src/config/`                           | Backend configuration.                                   |
-| `dashboard/`                            | Dashboard UI, browser-side analytics and frontend tests. |
-| `test/`                                 | Backend HTTP integration tests and test setup.           |
+| Directory                               | Responsibility                                                                    |
+| --------------------------------------- | --------------------------------------------------------------------------------- |
+| `src/audio/`, `src/chat/`, `src/model/` | HTTP handlers and application flows for transcription, cleanup and model listing. |
+| `src/ai/application/`                   | Provider contracts and generation results used by the application.                |
+| `src/ai/infrastructure/`                | Vercel SDK adapter and validation of provider metadata.                           |
+| `src/usage/`                            | Usage recording/history contracts and the SQLite implementation.                  |
+| `src/dashboard/`                        | Dashboard HTTP endpoints.                                                         |
+| `src/config/`                           | Backend configuration.                                                            |
+| `dashboard/`                            | Dashboard UI, browser-side analytics and frontend tests.                          |
+| `test/`                                 | Backend HTTP integration tests and test setup.                                    |
+
+Application flows depend on `AiProvider` and `UsageRecorder`, not the Vercel SDK or SQLite implementation. `AppModule` binds those contracts to the adapters. The chat adapter retains the upstream response body through the AI SDK, while the application records normalized usage and returns that body unchanged.
+
+HTTP request types live next to the HTTP handlers. Application contracts, usage records and shared dashboard props have named types in their respective modules. SDK metadata is checked when it enters the application. Keep types inferred for local values; add a named type when a contract is shared or an external value needs validation.
 
 ### Checks
 

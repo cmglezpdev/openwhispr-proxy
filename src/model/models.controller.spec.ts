@@ -1,10 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { createGateway as sdkCreateGateway } from '@ai-sdk/gateway';
+import { AiProvider } from '../ai/application/ai-provider';
 import { ModelsController } from './models.controller';
-
-// `@ai-sdk/gateway` is mocked globally in test/jest-setup.ts
-const createGateway = sdkCreateGateway as unknown as jest.Mock;
 
 const catalog = {
   models: [{ id: 'openai/gpt-4o-mini', name: 'GPT-4o mini' }],
@@ -16,10 +13,12 @@ describe('ModelsController', () => {
 
   beforeEach(async () => {
     getAvailableModels = jest.fn().mockResolvedValue(catalog);
-    createGateway.mockReset().mockReturnValue({ getAvailableModels });
 
     const moduleRef = await Test.createTestingModule({
       controllers: [ModelsController],
+      providers: [
+        { provide: AiProvider, useValue: { listModels: getAvailableModels } },
+      ],
     }).compile();
 
     controller = moduleRef.get(ModelsController);
@@ -28,7 +27,7 @@ describe('ModelsController', () => {
   it('builds a gateway with the caller api key and returns its catalog', async () => {
     const result = await controller.getModels('Bearer secret-key');
 
-    expect(createGateway).toHaveBeenCalledWith({ apiKey: 'secret-key' });
+    expect(getAvailableModels).toHaveBeenCalledWith('secret-key');
     expect(result).toEqual(catalog);
   });
 
@@ -37,7 +36,7 @@ describe('ModelsController', () => {
       new BadRequestException('API key is required'),
     );
 
-    expect(createGateway).not.toHaveBeenCalled();
+    expect(getAvailableModels).not.toHaveBeenCalled();
   });
 
   it('rejects an authorization header holding an empty bearer token', async () => {

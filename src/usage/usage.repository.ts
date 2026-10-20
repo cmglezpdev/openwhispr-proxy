@@ -6,22 +6,11 @@ import { EnvService } from 'src/config/env.service';
 import { UsageHistory } from './domain/usage-request';
 import type { UsageRequest } from './domain/usage-request';
 
-export interface TranscriptionRecord {
-  model: string;
-  text: string;
-  durationSeconds: number | null;
-  latencyMs: number | null;
-  costUsd: string | null;
-  generationId: string | null;
-}
-
-export interface EnhancedTranscriptionRecord {
-  model: string;
-  text: string;
-  latencyMs: number | null;
-  costUsd: string | null;
-  generationId: string | null;
-}
+import type {
+  TranscriptionRecord,
+  EnhancedTranscriptionRecord,
+} from './domain/usage-record';
+import { UsageRecorder } from './domain/usage-recorder';
 
 /**
  * Ordered schema migrations. Index === target `PRAGMA user_version`.
@@ -56,7 +45,10 @@ const MIGRATIONS: string[] = [
 ];
 
 @Injectable()
-export class UsageRepository extends UsageHistory implements OnModuleDestroy {
+export class UsageRepository
+  extends UsageHistory
+  implements UsageRecorder, OnModuleDestroy
+{
   private readonly logger = new Logger(UsageRepository.name);
   private readonly db: DatabaseSync;
 
