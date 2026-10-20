@@ -200,6 +200,7 @@ HTTP request types live next to the HTTP handlers. Application contracts, usage 
 
 ```bash
 pnpm test:all
+pnpm lint:check
 pnpm lint:dashboard
 pnpm build
 ```
@@ -207,6 +208,8 @@ pnpm build
 `pnpm test:all` runs backend unit tests, HTTP integration tests and dashboard tests. The HTTP suite builds the frontend and checks that Nest serves its HTML and assets. Jest tests mock Gateway calls and use temporary databases.
 
 For individual suites, use `pnpm test`, `pnpm test:e2e` or `pnpm test:dashboard`.
+
+Backend lint rejects inline object type annotations, explicit `any` and unhandled promises.
 
 ## Security and local use
 
