@@ -1,3 +1,5 @@
+import type { SdkProviderOptions } from './support/sdk-types';
+
 /**
  * Global test setup.
  *
@@ -19,10 +21,17 @@ jest.mock('ai', () => ({
 }));
 
 jest.mock('@ai-sdk/gateway', () => ({
-  createGateway: jest.fn(({ apiKey }: { apiKey: string }) =>
+  createGateway: jest.fn(({ apiKey }: SdkProviderOptions) =>
     Object.assign((modelId: string) => ({ modelId, apiKey }), {
       transcriptionModel: (modelId: string) => ({ modelId, apiKey }),
     }),
+  ),
+}));
+
+jest.mock('@ai-sdk/openai-compatible', () => ({
+  createOpenAICompatible: jest.fn(
+    ({ apiKey }: SdkProviderOptions) =>
+      (modelId: string) => ({ modelId, apiKey }),
   ),
 }));
 

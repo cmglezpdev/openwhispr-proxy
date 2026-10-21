@@ -1,4 +1,5 @@
-import { summarize, timeline, type TimelineBucket } from './analytics';
+import { summarize, timeline } from './analytics';
+import type { TimelineBucket, DailyStreak } from './analytics.types';
 import { dateInput, localDate, nextDay } from './dates';
 import type { UsageFilters, UsageRequest } from './types';
 
@@ -155,7 +156,7 @@ function dailyStreaks(requests: UsageRequest[], now: Date) {
   ).sort();
   if (!days.length) return [];
   const active = new Set(days);
-  const result: { date: string; current: number; longest: number }[] = [];
+  const result: DailyStreak[] = [];
   let longest = 0;
   let run = 0;
   let previous: string | undefined;

@@ -181,19 +181,26 @@ pnpm dev:dashboard
 
 Open the frontend URL printed in the terminal at `/dashboard/`. The development server forwards dashboard API requests to the backend using `PORT` from the environment or root `.env`.
 
-| Directory                               | Responsibility                                           |
-| --------------------------------------- | -------------------------------------------------------- |
-| `src/audio/`, `src/chat/`, `src/model/` | Gateway request handling.                                |
-| `src/usage/`                            | SQLite persistence and the shared usage contract.        |
-| `src/dashboard/`                        | Dashboard HTTP endpoints.                                |
-| `src/config/`                           | Backend configuration.                                   |
-| `dashboard/`                            | Dashboard UI, browser-side analytics and frontend tests. |
-| `test/`                                 | Backend HTTP integration tests and test setup.           |
+| Directory                               | Responsibility                                                                    |
+| --------------------------------------- | --------------------------------------------------------------------------------- |
+| `src/audio/`, `src/chat/`, `src/model/` | HTTP handlers and application flows for transcription, cleanup and model listing. |
+| `src/ai/application/`                   | Provider contracts and generation results used by the application.                |
+| `src/ai/infrastructure/`                | Vercel SDK adapter and validation of provider metadata.                           |
+| `src/usage/`                            | Usage recording/history contracts and the SQLite implementation.                  |
+| `src/dashboard/`                        | Dashboard HTTP endpoints.                                                         |
+| `src/config/`                           | Backend configuration.                                                            |
+| `dashboard/`                            | Dashboard UI, browser-side analytics and frontend tests.                          |
+| `test/`                                 | Backend HTTP integration tests and test setup.                                    |
+
+Application flows depend on `AiProvider` and `UsageRecorder`, not the Vercel SDK or SQLite implementation. `AppModule` binds those contracts to the adapters. The chat adapter retains the upstream response body through the AI SDK, while the application records normalized usage and returns that body unchanged.
+
+HTTP request types live next to the HTTP handlers. Application contracts, usage records and shared dashboard props have named types in their respective modules. SDK metadata and SQLite rows are checked when they enter the application. Keep types inferred for local values; add a named type when a contract is shared or an external value needs validation.
 
 ### Checks
 
 ```bash
 pnpm test:all
+pnpm lint:check
 pnpm lint:dashboard
 pnpm build
 ```
@@ -201,6 +208,25 @@ pnpm build
 `pnpm test:all` runs backend unit tests, HTTP integration tests and dashboard tests. The HTTP suite builds the frontend and checks that Nest serves its HTML and assets. Jest tests mock Gateway calls and use temporary databases.
 
 For individual suites, use `pnpm test`, `pnpm test:e2e` or `pnpm test:dashboard`.
+
+### Check the real SDK locally
+
+This simulation exercises the actual AI SDK over HTTP and verifies that cleanup returns the original response and records its text, cost and generation ID in SQLite. It uses a contract fixture based on Vercel's [Chat Completions response](https://vercel.com/docs/ai-gateway/sdks-and-apis/openai-chat-completions/chat-completions), without a live Gateway call or API credits.
+
+With Postman CLI installed, start the simulation in one terminal:
+
+```bash
+postman simulation run postman/simulations/cleanup.sim.yaml --port 4900 --no-history
+```
+
+In another terminal:
+
+```bash
+pnpm build:server
+node test/chat-gateway-smoke.cjs http://127.0.0.1:4900/gateway
+```
+
+Stop the simulation with Ctrl+C when the check completes. Backend lint rejects inline object type annotations, explicit `any` and unhandled promises.
 
 ## Security and local use
 

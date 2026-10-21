@@ -1,70 +1,38 @@
 import { Injectable } from '@nestjs/common';
-import { createGateway } from '@ai-sdk/gateway';
-import { generateText, JSONValue } from 'ai';
-import { UsageRepository } from 'src/usage/usage.repository';
-
-export interface ChatMessage {
-  role: 'system' | 'user';
-  content: string;
-}
-
-export interface ChatCompletionOptions {
-  maxCompletionTokens?: number;
-  reasoningEffort?: string;
-  chatTemplateKwargs?: Record<string, JSONValue>;
-}
+import { AiProvider } from '../ai/application/ai-provider';
+import { UsageRecorder } from '../usage/domain/usage-recorder';
+import type {
+  ChatCompletionOptions,
+  ChatMessage,
+} from './types/chat-completion';
 
 @Injectable()
 export class ChatService {
-  constructor(private readonly usageRepo: UsageRepository) {}
+  constructor(
+    private readonly provider: AiProvider,
+    private readonly usage: UsageRecorder,
+  ) {}
 
   async generateCompletion(
     model: string,
     messages: ChatMessage[],
     apiKey: string,
     options: ChatCompletionOptions = {},
-  ): Promise<Awaited<ReturnType<typeof generateText>>> {
-    const gateway = createGateway({ apiKey });
-    const { maxCompletionTokens, reasoningEffort, chatTemplateKwargs } =
-      options;
-
-    const gatewayOptions: Record<string, JSONValue> = {};
-    if (maxCompletionTokens !== undefined) {
-      gatewayOptions.maxCompletionTokens = maxCompletionTokens;
-    }
-    if (reasoningEffort !== undefined) {
-      gatewayOptions.reasoningEffort = reasoningEffort;
-    }
-    if (chatTemplateKwargs !== undefined) {
-      gatewayOptions.chat_template_kwargs = chatTemplateKwargs;
-    }
-
+  ): Promise<unknown> {
     const startedAt = performance.now();
-    const result = await generateText({
-      model: gateway(model),
-      messages,
-      allowSystemInMessages: true,
-      ...(Object.keys(gatewayOptions).length > 0 && {
-        providerOptions: { gateway: gatewayOptions },
-      }),
-    });
-    const latencyMs = Math.round(performance.now() - startedAt);
-
-    const { text, steps } = result;
-    const finalStep = steps.at(-1);
-    const costUsd =
-      (finalStep?.providerMetadata?.gateway?.cost as string) ?? null;
-    const generationId =
-      (finalStep?.providerMetadata?.gateway?.generationId as string) ?? null;
-
-    this.usageRepo.saveEnhancedTranscription({
+    const result = await this.provider.completeChat({
       model,
-      text,
-      latencyMs,
-      costUsd,
-      generationId,
+      messages,
+      apiKey,
+      options,
     });
-
-    return result;
+    this.usage.saveEnhancedTranscription({
+      model,
+      text: result.text,
+      costUsd: result.costUsd,
+      generationId: result.generationId,
+      latencyMs: Math.round(performance.now() - startedAt),
+    });
+    return result.responseBody;
   }
 }

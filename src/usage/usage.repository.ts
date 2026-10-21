@@ -6,22 +6,12 @@ import { EnvService } from 'src/config/env.service';
 import { UsageHistory } from './domain/usage-request';
 import type { UsageRequest } from './domain/usage-request';
 
-export interface TranscriptionRecord {
-  model: string;
-  text: string;
-  durationSeconds: number | null;
-  latencyMs: number | null;
-  costUsd: string | null;
-  generationId: string | null;
-}
-
-export interface EnhancedTranscriptionRecord {
-  model: string;
-  text: string;
-  latencyMs: number | null;
-  costUsd: string | null;
-  generationId: string | null;
-}
+import type {
+  TranscriptionRecord,
+  EnhancedTranscriptionRecord,
+} from './domain/usage-record';
+import { mapUsageRow } from './infrastructure/usage-row.mapper';
+import { UsageRecorder } from './domain/usage-recorder';
 
 /**
  * Ordered schema migrations. Index === target `PRAGMA user_version`.
@@ -56,7 +46,10 @@ const MIGRATIONS: string[] = [
 ];
 
 @Injectable()
-export class UsageRepository extends UsageHistory implements OnModuleDestroy {
+export class UsageRepository
+  extends UsageHistory
+  implements UsageRecorder, OnModuleDestroy
+{
   private readonly logger = new Logger(UsageRepository.name);
   private readonly db: DatabaseSync;
 
@@ -77,9 +70,11 @@ export class UsageRepository extends UsageHistory implements OnModuleDestroy {
    * Runs on every boot and is a no-op once the schema is up to date.
    */
   private runMigrations(): void {
-    const { user_version: currentVersion } = this.db
+    const currentVersion = this.db
       .prepare('PRAGMA user_version')
-      .get() as { user_version: number };
+      .get()?.user_version;
+    if (typeof currentVersion !== 'number')
+      throw new Error('Could not read the SQLite schema version');
 
     if (currentVersion >= MIGRATIONS.length) return;
 
@@ -148,7 +143,8 @@ export class UsageRepository extends UsageHistory implements OnModuleDestroy {
       ORDER BY createdAt DESC, key DESC
     `,
       )
-      .all() as unknown as UsageRequest[];
+      .all()
+      .map(mapUsageRow);
   }
 
   onModuleDestroy(): void {

@@ -1,0 +1,5 @@
+simulation: cleanup-contract
+routing: path
+mocks:
+  - routeKey: gateway
+    path: ../mocks/gateway/default.js

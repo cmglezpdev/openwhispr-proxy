@@ -8,8 +8,7 @@ jest.mock('src/common/provider-model.validator', () => ({
   assertProviderModelFormat: jest.fn(),
 }));
 
-const assertProviderModelFormat =
-  sdkAssertProviderModelFormat as unknown as jest.Mock;
+const assertProviderModelFormat = jest.mocked(sdkAssertProviderModelFormat);
 
 const buildFile = (
   overrides: Partial<Express.Multer.File> = {},
@@ -50,7 +49,7 @@ describe('AudioController', () => {
     );
 
     expect(transcribe).toHaveBeenCalledWith(
-      file,
+      file.buffer,
       'openai/whisper-1',
       'secret-key',
     );
@@ -68,7 +67,7 @@ describe('AudioController', () => {
     );
 
     expect(transcribe).toHaveBeenCalledWith(
-      first,
+      first.buffer,
       expect.anything(),
       expect.anything(),
     );

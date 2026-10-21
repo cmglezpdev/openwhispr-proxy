@@ -1,8 +1,9 @@
+import type { UsageSelectionProps } from '../types';
 import { Select } from '../../../../shared/ui/Select';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { dailyActivity } from '../../domain/activity';
 import { localDate } from '../../domain/dates';
-import type { Metric, UsageFilters, UsageRequest } from '../../domain/types';
+import type { Metric } from '../../domain/types';
 import { audioDuration, money, number } from '../../../../shared/format';
 
 const colors = [
@@ -14,13 +15,7 @@ const colors = [
 ];
 const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-export function ActivityHeatmap({
-  requests,
-  filters,
-}: {
-  requests: UsageRequest[];
-  filters: UsageFilters;
-}) {
+export function ActivityHeatmap({ requests, filters }: UsageSelectionProps) {
   const calendarRef = useRef<HTMLDivElement>(null);
   const [calendarWidth, setCalendarWidth] = useState(0);
   useEffect(() => {

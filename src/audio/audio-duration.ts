@@ -1,3 +1,9 @@
+import type {
+  AudioFormat,
+  EbmlValue,
+  AudioBlockTiming,
+} from './types/audio-duration';
+
 /**
  * Extracts audio duration (seconds) from a raw audio buffer by parsing the
  * container headers directly. No external dependencies — covers the formats
@@ -26,8 +32,6 @@ export function getAudioDurationSeconds(buffer: Buffer): number | null {
       return null;
   }
 }
-
-type AudioFormat = 'wav' | 'webm' | 'ogg' | 'mp4' | 'mp3' | null;
 
 function detectFormat(buffer: Buffer): AudioFormat {
   // WAV: RIFF....WAVE
@@ -133,18 +137,12 @@ function readVintValue(buffer: Buffer, off: number, length: number): number {
   return value;
 }
 
-function readIdValue(
-  buffer: Buffer,
-  off: number,
-): { value: number; length: number } {
+function readIdValue(buffer: Buffer, off: number): EbmlValue {
   const length = readVintLength(buffer, off);
   return { value: readVintValue(buffer, off, length), length };
 }
 
-function readSizeValue(
-  buffer: Buffer,
-  off: number,
-): { value: number; length: number } {
+function readSizeValue(buffer: Buffer, off: number): EbmlValue {
   const b = buffer[off];
   let mask = 0x80;
   let length = 1;
@@ -221,7 +219,7 @@ function scanCluster(
   start: number,
   end: number,
   timecodeScale: number,
-  onLastBlock: (found: { timestamp: number; durationMs: number }) => void,
+  onLastBlock: (found: AudioBlockTiming) => void,
 ): void {
   let off = start;
   let clusterTimestamp = 0;

@@ -1,8 +1,6 @@
 import type { ButtonHTMLAttributes } from 'react';
 
-type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: 'default' | 'primary' | 'text';
-};
+import type { ButtonProps } from './types';
 
 const variants = {
   default: 'border-border bg-white hover:border-[#c9d7d3] hover:bg-[#f8fafb]',

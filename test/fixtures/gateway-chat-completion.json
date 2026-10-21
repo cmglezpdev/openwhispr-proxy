@@ -1,0 +1,27 @@
+{
+  "id": "gen_cleanup_contract",
+  "object": "chat.completion",
+  "created": 1792368000,
+  "model": "google/gemini-2.5-flash-lite",
+  "choices": [
+    {
+      "index": 0,
+      "message": {
+        "role": "assistant",
+        "content": "Hola, esta es una prueba.",
+        "provider_metadata": {
+          "gateway": { "cost": "0.002", "generationId": "gen_cleanup_contract" }
+        }
+      },
+      "finish_reason": "stop"
+    }
+  ],
+  "usage": {
+    "prompt_tokens": 10,
+    "completion_tokens": 7,
+    "total_tokens": 17,
+    "cost": 0.002
+  },
+  "generationId": "gen_cleanup_contract",
+  "system_fingerprint": "gateway-contract-fixture"
+}

@@ -1,163 +1,77 @@
 import { Test } from '@nestjs/testing';
-import { generateText as sdkGenerateText } from 'ai';
-import { UsageRepository } from 'src/usage/usage.repository';
-import { ChatMessage, ChatService } from './chat.service';
+import { AiProvider } from '../ai/application/ai-provider';
+import { UsageRecorder } from '../usage/domain/usage-recorder';
+import type { GenerationResult } from '../ai/application/generation-result';
+import type { ChatMessage } from './types/chat-completion';
+import { ChatService } from './chat.service';
 
-// `ai` is mocked globally in test/jest-setup.ts
-const generateText = sdkGenerateText as unknown as jest.Mock;
-
-const messages: ChatMessage[] = [
-  { role: 'system', content: 'You are a transcription cleaner.' },
-  { role: 'user', content: 'fix   this  text' },
-];
-
-const stepWithMetadata = (cost: string, generationId: string) => ({
-  providerMetadata: { gateway: { cost, generationId } },
-});
-
-type Step = ReturnType<typeof stepWithMetadata> | Record<string, never>;
-
-const gatewayResult = (
-  steps: Step[] = [stepWithMetadata('0.001', 'gen_1')],
-) => ({
-  text: 'fix this text',
-  steps,
-});
+const messages: ChatMessage[] = [{ role: 'user', content: 'fix this text' }];
+const completion: GenerationResult = {
+  text: 'Fix this text.',
+  responseBody: { choices: [{ message: { content: 'Fix this text.' } }] },
+  costUsd: '0.002',
+  generationId: 'gen_chat',
+};
 
 describe('ChatService', () => {
+  const completeChat = jest.fn<
+    ReturnType<AiProvider['completeChat']>,
+    Parameters<AiProvider['completeChat']>
+  >();
+  const saveEnhancedTranscription = jest.fn<
+    ReturnType<UsageRecorder['saveEnhancedTranscription']>,
+    Parameters<UsageRecorder['saveEnhancedTranscription']>
+  >();
   let service: ChatService;
-  let saveEnhancedTranscription: jest.Mock;
-  const originalApiKey = process.env.AI_GATEWAY_API_KEY;
 
   beforeEach(async () => {
-    generateText.mockReset().mockResolvedValue(gatewayResult());
-    saveEnhancedTranscription = jest.fn();
-
+    completeChat.mockReset().mockResolvedValue(completion);
+    saveEnhancedTranscription.mockReset();
     const moduleRef = await Test.createTestingModule({
       providers: [
         ChatService,
-        { provide: UsageRepository, useValue: { saveEnhancedTranscription } },
+        { provide: AiProvider, useValue: { completeChat } },
+        { provide: UsageRecorder, useValue: { saveEnhancedTranscription } },
       ],
     }).compile();
-
     service = moduleRef.get(ChatService);
   });
 
-  afterEach(() => {
-    if (originalApiKey === undefined) {
-      delete process.env.AI_GATEWAY_API_KEY;
-    } else {
-      process.env.AI_GATEWAY_API_KEY = originalApiKey;
-    }
-  });
-
-  it('isolates concurrent callers without changing the process api key', async () => {
-    const previous = process.env.AI_GATEWAY_API_KEY;
-    await Promise.all(
-      ['key-a', 'key-b'].map((key) =>
-        service.generateCompletion('openai/gpt-4o-mini', messages, key),
-      ),
-    );
-
-    const calls = generateText.mock.calls as [{ model: { apiKey: string } }][];
-    expect(calls.map(([options]) => options.model.apiKey)).toEqual([
-      'key-a',
-      'key-b',
-    ]);
-    expect(process.env.AI_GATEWAY_API_KEY).toBe(previous);
-  });
-
-  it('omits providerOptions entirely when no gateway option is supplied', async () => {
-    await service.generateCompletion('openai/gpt-4o-mini', messages, 'secret');
-
-    expect(generateText).toHaveBeenCalledWith({
-      model: { modelId: 'openai/gpt-4o-mini', apiKey: 'secret' },
+  it('records a completed cleanup and returns the same response body', async () => {
+    const body = await service.generateCompletion(
+      'google/gemini-2.5-flash-lite',
       messages,
-      allowSystemInMessages: true,
-    });
-  });
-
-  it('maps the supplied options into gateway providerOptions', async () => {
-    await service.generateCompletion('openai/gpt-4o-mini', messages, 'secret', {
-      maxCompletionTokens: 256,
-      reasoningEffort: 'low',
-      chatTemplateKwargs: { thinking: false },
-    });
-
-    expect(generateText).toHaveBeenCalledWith(
-      expect.objectContaining({
-        providerOptions: {
-          gateway: {
-            maxCompletionTokens: 256,
-            reasoningEffort: 'low',
-            chat_template_kwargs: { thinking: false },
-          },
-        },
-      }),
+      'key',
+      { reasoningEffort: 'low' },
     );
-  });
-
-  it('only forwards the options that were explicitly provided', async () => {
-    await service.generateCompletion('openai/gpt-4o-mini', messages, 'secret', {
-      reasoningEffort: 'high',
+    expect(completeChat).toHaveBeenCalledWith({
+      model: 'google/gemini-2.5-flash-lite',
+      messages,
+      apiKey: 'key',
+      options: { reasoningEffort: 'low' },
     });
-
-    expect(generateText).toHaveBeenCalledWith(
-      expect.objectContaining({
-        providerOptions: { gateway: { reasoningEffort: 'high' } },
-      }),
-    );
-  });
-
-  it('persists the usage taken from the last step', async () => {
-    generateText.mockResolvedValue(
-      gatewayResult([
-        stepWithMetadata('0.001', 'gen_1'),
-        stepWithMetadata('0.007', 'gen_2'),
-      ]),
-    );
-
-    await service.generateCompletion('openai/gpt-4o-mini', messages, 'secret');
-
+    expect(body).toBe(completion.responseBody);
     expect(saveEnhancedTranscription).toHaveBeenCalledWith({
-      model: 'openai/gpt-4o-mini',
-      text: 'fix this text',
+      model: 'google/gemini-2.5-flash-lite',
+      text: completion.text,
+      costUsd: '0.002',
+      generationId: 'gen_chat',
       latencyMs: expect.any(Number) as unknown,
-      costUsd: '0.007',
-      generationId: 'gen_2',
     });
+    expect(
+      saveEnhancedTranscription.mock.calls[0][0].latencyMs,
+    ).toBeGreaterThanOrEqual(0);
   });
 
-  it.each<[string, Step[]]>([
-    ['no steps', []],
-    ['a step without gateway metadata', [{}]],
-  ])('persists null usage when the response has %s', async (_label, steps) => {
-    generateText.mockResolvedValue(gatewayResult(steps));
-
-    await service.generateCompletion('openai/gpt-4o-mini', messages, 'secret');
-
-    expect(saveEnhancedTranscription).toHaveBeenCalledWith(
-      expect.objectContaining({ costUsd: null, generationId: null }),
-    );
-  });
-
-  it('returns the untouched gateway result', async () => {
-    const result = await service.generateCompletion(
-      'openai/gpt-4o-mini',
-      messages,
-      'secret',
-    );
-
-    expect(result).toEqual(gatewayResult());
-  });
-
-  it('does not persist anything when the gateway call fails', async () => {
-    generateText.mockRejectedValue(new Error('gateway down'));
-
+  it('does not persist usage when generation fails', async () => {
+    completeChat.mockRejectedValue(new Error('gateway down'));
     await expect(
-      service.generateCompletion('openai/gpt-4o-mini', messages, 'secret'),
+      service.generateCompletion(
+        'google/gemini-2.5-flash-lite',
+        messages,
+        'key',
+      ),
     ).rejects.toThrow('gateway down');
-
     expect(saveEnhancedTranscription).not.toHaveBeenCalled();
   });
 });

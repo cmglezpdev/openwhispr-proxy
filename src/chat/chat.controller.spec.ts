@@ -2,26 +2,39 @@ import { BadRequestException, Logger } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import { assertProviderModelFormat as sdkAssertProviderModelFormat } from 'src/common/provider-model.validator';
 import { ChatController } from './chat.controller';
-import { ChatMessage, ChatService } from './chat.service';
+import { ChatService } from './chat.service';
+import type { ChatMessage } from './types/chat-completion';
 
 jest.mock('src/common/provider-model.validator', () => ({
   assertProviderModelFormat: jest.fn(),
 }));
 
-const assertProviderModelFormat =
-  sdkAssertProviderModelFormat as unknown as jest.Mock;
+const assertProviderModelFormat = jest.mocked(sdkAssertProviderModelFormat);
 
 const messages: ChatMessage[] = [
   { role: 'system', content: 'You are a transcription cleaner.' },
   { role: 'user', content: 'fix   this  text' },
 ];
 
+const responseBody = {
+  id: 'gen_test',
+  object: 'chat.completion',
+  choices: [
+    {
+      message: { role: 'assistant', content: 'fix this text' },
+      finish_reason: 'stop',
+    },
+  ],
+  usage: { prompt_tokens: 10, completion_tokens: 4, total_tokens: 14 },
+  provider_extension: { preserved: true },
+};
+
 describe('ChatController', () => {
   let controller: ChatController;
   let generateCompletion: jest.Mock;
 
   beforeEach(async () => {
-    generateCompletion = jest.fn().mockResolvedValue({ text: 'fix this text' });
+    generateCompletion = jest.fn().mockResolvedValue(responseBody);
     assertProviderModelFormat.mockReset();
 
     const moduleRef = await Test.createTestingModule({
@@ -32,7 +45,7 @@ describe('ChatController', () => {
     controller = moduleRef.get(ChatController);
   });
 
-  it('delegates to the service and returns its result', async () => {
+  it('delegates to the service and returns an OpenAI-compatible completion', async () => {
     const result: unknown = await controller.completions('Bearer secret-key', {
       model: 'openai/gpt-4o-mini',
       messages,
@@ -48,7 +61,7 @@ describe('ChatController', () => {
         chatTemplateKwargs: undefined,
       },
     );
-    expect(result).toEqual({ text: 'fix this text' });
+    expect(result).toBe(responseBody);
   });
 
   it('forwards the OpenAI-style snake_case options as camelCase', async () => {

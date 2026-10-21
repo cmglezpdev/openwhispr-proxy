@@ -1,15 +1,4 @@
-import type { SelectHTMLAttributes } from 'react';
-
-type SelectValue = string | number;
-type SelectProps<T extends SelectValue> = Omit<
-  SelectHTMLAttributes<HTMLSelectElement>,
-  'value' | 'defaultValue' | 'onChange' | 'children' | 'multiple' | 'size'
-> & {
-  value: T;
-  options: readonly { value: NoInfer<T>; label: string; disabled?: boolean }[];
-  onValueChange: (value: NoInfer<T>) => void;
-  size?: 'default' | 'compact' | 'small';
-};
+import type { SelectProps, SelectValue } from './types';
 
 const sizes = {
   default: 'min-h-8.75 py-1.5 text-[12px]',

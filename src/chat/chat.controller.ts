@@ -1,3 +1,4 @@
+import { requireApiKey } from '../common/http/authorization';
 import {
   BadRequestException,
   Body,
@@ -6,17 +7,9 @@ import {
   Logger,
   Post,
 } from '@nestjs/common';
-import { JSONValue } from 'ai';
 import { assertProviderModelFormat } from 'src/common/provider-model.validator';
-import { ChatMessage, ChatService } from './chat.service';
-
-interface ChatCompletionsBody {
-  model?: string;
-  messages?: ChatMessage[];
-  max_completion_tokens?: number;
-  reasoning_effort?: string;
-  chat_template_kwargs?: Record<string, JSONValue>;
-}
+import { ChatService } from './chat.service';
+import type { ChatCompletionsBody } from './http/chat-completions.body';
 
 @Controller('v1/chat')
 export class ChatController {
@@ -28,10 +21,9 @@ export class ChatController {
   async completions(
     @Headers('authorization') authorization: string | undefined,
     @Body() body: ChatCompletionsBody,
-  ): Promise<any> {
+  ) {
     const model = body.model;
     const messages = body.messages;
-    const apiKey = authorization?.replace(/^Bearer\s+/i, '');
 
     if (!model) {
       throw new BadRequestException('Model is required');
@@ -39,9 +31,7 @@ export class ChatController {
 
     assertProviderModelFormat(model, 'openai/gpt-4o-mini');
 
-    if (!apiKey) {
-      throw new BadRequestException('API key is required');
-    }
+    const apiKey = requireApiKey(authorization);
 
     if (!messages || messages.length === 0) {
       throw new BadRequestException('Messages are required');

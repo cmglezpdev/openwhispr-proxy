@@ -1,3 +1,4 @@
+import type { UsageRequestsProps } from '../types';
 import { Select } from '../../../../shared/ui/Select';
 import { useMemo, useState } from 'react';
 import { barX, defineChart } from '@tanstack/charts';
@@ -6,10 +7,10 @@ import { scaleBand } from '@tanstack/charts/scales/band';
 import { scaleLinear } from '@tanstack/charts/scales/linear';
 import { tooltip } from '@tanstack/charts/tooltip';
 import { comparison } from '../../domain/analytics';
-import type { Metric, UsageRequest } from '../../domain/types';
+import type { Metric } from '../../domain/types';
 import { money, number } from '../../../../shared/format';
 
-export function ComparisonChart({ requests }: { requests: UsageRequest[] }) {
+export function ComparisonChart({ requests }: UsageRequestsProps) {
   const [by, setBy] = useState<'model' | 'kind'>('model');
   const [metric, setMetric] = useState<Metric>('requests');
   const groups = useMemo(
