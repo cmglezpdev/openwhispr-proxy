@@ -1,6 +1,6 @@
 {
   "name": "openwhispr-proxy",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "packageManager": "pnpm@11.23.0",
   "description": "",
   "author": "",
