@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.3.1](https://github.com/cmglezpdev/openwhispr-proxy/compare/v0.3.0...v0.3.1) (2026-10-21)
+
+
+### 🐛 Bug Fixes
+
+* preserve Vercel AI Gateway cleanup responses ([#12](https://github.com/cmglezpdev/openwhispr-proxy/issues/12)) ([02c23bf](https://github.com/cmglezpdev/openwhispr-proxy/commit/02c23bfc7367f2ca021cf01635d0a6b1f8a89c7a))
+
+
+### 📚 Documentation
+
+* update README for clarity on proxy functionality and security considerations ([01af874](https://github.com/cmglezpdev/openwhispr-proxy/commit/01af874ed9bb990915ad47eb23c1d4ebdff2502d))
+
 ## [0.3.0](https://github.com/cmglezpdev/openwhispr-proxy/compare/v0.2.0...v0.3.0) (2026-10-18)
 
 
